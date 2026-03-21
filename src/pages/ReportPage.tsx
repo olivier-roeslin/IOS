@@ -44,15 +44,48 @@ export default function ReportPage({ supabase, session }) {
     }
 
     try {
+      const reportTitle = title || 'Signalement sans titre';
       const { error } = await supabase.from('reports').insert({
         user_id: session.user.id,
-        title: title || 'Signalement sans titre',
+        title: reportTitle,
         description,
         anonymous,
         user_email: anonymous ? null : session.user.email,
       });
 
       if (error) throw error;
+
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        const emailMessage = `
+Nouveau signalement reçu
+
+Titre: ${reportTitle}
+Type: ${anonymous ? 'Anonyme' : 'Non-anonyme'}
+${!anonymous ? `Email: ${session.user.email}` : ''}
+
+Description:
+${description}
+        `;
+
+        await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentSession?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: 'tatyanalorenzetti@gmail.com',
+            subject: `Nouveau signalement: ${reportTitle}`,
+            message: emailMessage,
+            fromName: 'Application Harcèlement - Signalements'
+          }),
+        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+      }
 
       setSuccess('✅ Signalement envoyé avec succès!');
       setTitle('');

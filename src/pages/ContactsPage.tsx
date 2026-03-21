@@ -72,7 +72,7 @@ const CONTACTS = [
 
 const CATEGORIES = ['Tous', 'Urgence', 'Juridique', 'École', 'Soutien'];
 
-export default function ContactsPage() {
+export default function ContactsPage({ supabase }) {
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [selectedContact, setSelectedContact] = useState<typeof CONTACTS[0] | null>(null);
   const [message, setMessage] = useState('');
@@ -100,10 +100,39 @@ export default function ContactsPage() {
     }));
 
     setMessage('');
-    setEmailStatus('✅ Message enregistré!');
-    setSendingEmail(false);
 
-    setTimeout(() => setEmailStatus(''), 3000);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: selectedContact.email,
+          subject: `Message pour ${selectedContact.title}`,
+          message: messageText,
+          fromName: 'Application Harcèlement'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setEmailStatus('✅ Email envoyé avec succès!');
+      } else {
+        setEmailStatus('⚠️ Message enregistré (email non configuré)');
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setEmailStatus('⚠️ Message enregistré localement');
+    } finally {
+      setSendingEmail(false);
+      setTimeout(() => setEmailStatus(''), 3000);
+    }
   };
 
   return (

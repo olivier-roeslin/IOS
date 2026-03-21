@@ -35,7 +35,7 @@ export default function MainApp({ session, supabase }) {
           {currentPage === 'report' && <ReportPage supabase={supabase} session={session} />}
           {currentPage === 'chatbot' && <ChatbotPage />}
           {currentPage === 'documents' && <DocumentsPage />}
-          {currentPage === 'contacts' && <ContactsPage />}
+          {currentPage === 'contacts' && <ContactsPage supabase={supabase} />}
         </main>
       </div>
     </div>
