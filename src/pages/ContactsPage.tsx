@@ -85,10 +85,6 @@ export default function ContactsPage() {
       ? CONTACTS
       : CONTACTS.filter((c) => c.category === selectedCategory);
 
-  const handlePhoneClick = (phone: string) => {
-    window.location.href = `tel:${phone}`;
-  };
-
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedContact) return;
 
@@ -103,16 +99,8 @@ export default function ContactsPage() {
       [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage],
     }));
 
-    const mailtoLink = `mailto:${selectedContact.email}?subject=${encodeURIComponent(
-      `Message de AbusePas - ${selectedContact.title}`
-    )}&body=${encodeURIComponent(
-      `Message pour ${selectedContact.name} (${selectedContact.title}):\n\n${messageText}`
-    )}`;
-
-    window.location.href = mailtoLink;
-
     setMessage('');
-    setEmailStatus('✅ Client email ouvert. Message envoyé!');
+    setEmailStatus('✅ Message enregistré!');
     setSendingEmail(false);
 
     setTimeout(() => setEmailStatus(''), 3000);
@@ -153,13 +141,10 @@ export default function ContactsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{contact.title}</h3>
               <p className="text-sm text-gray-600 mb-4">{contact.name}</p>
               <div className="space-y-2 mb-4">
-                <button
-                  onClick={() => handlePhoneClick(contact.phone)}
-                  className="w-full text-left text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2 p-2 hover:bg-blue-50 rounded transition"
-                >
-                  <Phone size={16} />
+                <p className="text-sm text-gray-700 flex items-center gap-2 p-2">
+                  <Phone size={16} className="text-blue-600" />
                   {contact.phone}
-                </button>
+                </p>
                 <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
                   <Mail size={16} />
                   Contact via app
@@ -190,16 +175,13 @@ export default function ContactsPage() {
               <p className="text-gray-700 flex items-center gap-2">
                 <span className="font-semibold">Nom:</span> {selectedContact.name}
               </p>
-              <button
-                onClick={() => handlePhoneClick(selectedContact.phone)}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-medium"
-              >
+              <p className="text-gray-700 flex items-center gap-2">
                 <Phone size={18} className="text-blue-600" />
-                {selectedContact.phone} (Cliquer pour appeler)
-              </button>
+                <span className="font-semibold">Téléphone:</span> {selectedContact.phone}
+              </p>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
-                {selectedContact.email}
+                <span className="font-semibold">Email:</span> {selectedContact.email}
               </p>
             </div>
           </div>
