@@ -1,45 +1,47 @@
-import { useState } from 'react';
-import { Phone, Mail, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Phone, Mail, ChevronRight, Send } from 'lucide-react';
+
+const EMAIL_DESTINATAIRE = 'tatyanalorenzetti@gmail.com';
 
 const CONTACTS = [
   {
     id: 1,
     title: 'Psychologue',
     name: 'Dr. Marie Dubois',
-    phone: '+41 32 456 78 90',
-    email: 'marie@example.com',
+    phone: '+41324567890',
+    email: EMAIL_DESTINATAIRE,
     category: 'Soutien',
   },
   {
     id: 2,
     title: 'Assistant juridique',
     name: 'Me. Jean-Pierre Martin',
-    phone: '+41 32 456 78 91',
-    email: 'jean@example.com',
+    phone: '+41324567891',
+    email: EMAIL_DESTINATAIRE,
     category: 'Juridique',
   },
   {
     id: 3,
     title: 'Commissaire d\'apprentissage',
     name: 'Sophie Müller',
-    phone: '+41 32 456 78 92',
-    email: 'sophie@example.com',
+    phone: '+41324567892',
+    email: EMAIL_DESTINATAIRE,
     category: 'École',
   },
   {
     id: 4,
     title: 'Aide au harcèlement',
     name: 'Ligne d\'écoute 24/7',
-    phone: '+41 800 123 456',
-    email: 'help@example.com',
+    phone: '+41800123456',
+    email: EMAIL_DESTINATAIRE,
     category: 'Urgence',
   },
   {
     id: 5,
     title: 'Médecin scolaire',
     name: 'Dr. Paul Fontaine',
-    phone: '+41 32 456 78 93',
-    email: 'paul@example.com',
+    phone: '+41324567893',
+    email: EMAIL_DESTINATAIRE,
     category: 'Soutien',
   },
   {
@@ -47,23 +49,23 @@ const CONTACTS = [
     title: 'Police secours',
     name: 'Police cantonale',
     phone: '117',
-    email: 'police@example.com',
+    email: EMAIL_DESTINATAIRE,
     category: 'Urgence',
   },
   {
     id: 7,
     title: 'Avocat apprentis',
     name: 'Me. Claire Rochat',
-    phone: '+41 32 456 78 94',
-    email: 'claire@example.com',
+    phone: '+41324567894',
+    email: EMAIL_DESTINATAIRE,
     category: 'Juridique',
   },
   {
     id: 8,
     title: 'Directeur école',
     name: 'M. Bernard Favre',
-    phone: '+41 32 456 78 95',
-    email: 'bernard@example.com',
+    phone: '+41324567895',
+    email: EMAIL_DESTINATAIRE,
     category: 'École',
   },
 ];
@@ -73,11 +75,48 @@ const CATEGORIES = ['Tous', 'Urgence', 'Juridique', 'École', 'Soutien'];
 export default function ContactsPage() {
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [selectedContact, setSelectedContact] = useState<typeof CONTACTS[0] | null>(null);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Record<number, Array<{ text: string; date: Date }>>>({});
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState('');
 
   const filteredContacts =
     selectedCategory === 'Tous'
       ? CONTACTS
       : CONTACTS.filter((c) => c.category === selectedCategory);
+
+  const handlePhoneClick = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedContact) return;
+
+    setSendingEmail(true);
+    setEmailStatus('');
+
+    const messageText = message.trim();
+    const newMessage = { text: messageText, date: new Date() };
+
+    setMessages((prev) => ({
+      ...prev,
+      [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage],
+    }));
+
+    const mailtoLink = `mailto:${selectedContact.email}?subject=${encodeURIComponent(
+      `Message de AbusePas - ${selectedContact.title}`
+    )}&body=${encodeURIComponent(
+      `Message pour ${selectedContact.name} (${selectedContact.title}):\n\n${messageText}`
+    )}`;
+
+    window.location.href = mailtoLink;
+
+    setMessage('');
+    setEmailStatus('✅ Client email ouvert. Message envoyé!');
+    setSendingEmail(false);
+
+    setTimeout(() => setEmailStatus(''), 3000);
+  };
 
   return (
     <div>
@@ -109,22 +148,27 @@ export default function ContactsPage() {
           {filteredContacts.map((contact) => (
             <div
               key={contact.id}
-              className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition cursor-pointer"
-              onClick={() => setSelectedContact(contact)}
+              className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{contact.title}</h3>
               <p className="text-sm text-gray-600 mb-4">{contact.name}</p>
               <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-600 flex items-center gap-2">
+                <button
+                  onClick={() => handlePhoneClick(contact.phone)}
+                  className="w-full text-left text-sm text-blue-600 hover:text-blue-700 flex items-center gap-2 p-2 hover:bg-blue-50 rounded transition"
+                >
                   <Phone size={16} />
                   {contact.phone}
-                </p>
-                <p className="text-sm text-gray-600 flex items-center gap-2">
+                </button>
+                <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
                   <Mail size={16} />
-                  {contact.email}
+                  Contact via app
                 </p>
               </div>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition text-sm flex items-center justify-center gap-2">
+              <button
+                onClick={() => setSelectedContact(contact)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition text-sm flex items-center justify-center gap-2"
+              >
                 Contacter
                 <ChevronRight size={16} />
               </button>
@@ -146,10 +190,13 @@ export default function ContactsPage() {
               <p className="text-gray-700 flex items-center gap-2">
                 <span className="font-semibold">Nom:</span> {selectedContact.name}
               </p>
-              <p className="text-gray-700 flex items-center gap-2">
+              <button
+                onClick={() => handlePhoneClick(selectedContact.phone)}
+                className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-medium"
+              >
                 <Phone size={18} className="text-blue-600" />
-                {selectedContact.phone}
-              </p>
+                {selectedContact.phone} (Cliquer pour appeler)
+              </button>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
                 {selectedContact.email}
@@ -158,15 +205,46 @@ export default function ContactsPage() {
           </div>
 
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Historique</h3>
-          <p className="text-gray-600 mb-6">Aucun message encore. Écris à {selectedContact.name} ci-dessous.</p>
+
+          <div className="mb-6 space-y-3 max-h-96 overflow-y-auto">
+            {messages[selectedContact.id]?.length > 0 ? (
+              messages[selectedContact.id].map((msg, idx) => (
+                <div key={idx} className="bg-blue-600 text-white rounded-lg p-4">
+                  <p className="text-xs font-semibold mb-2">Moi</p>
+                  <p className="text-sm">{msg.text}</p>
+                  <p className="text-xs text-blue-100 mt-2">
+                    {msg.date.toLocaleString('fr-CH')}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600">
+                Aucun message encore. Écris à {selectedContact.name} ci-dessous.
+              </p>
+            )}
+          </div>
+
+          {emailStatus && (
+            <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md text-sm">
+              {emailStatus}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <input
               type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder={`Écrire à ${selectedContact.name}...`}
               className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition">
+            <button
+              onClick={handleSendMessage}
+              disabled={sendingEmail || !message.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition disabled:opacity-50 flex items-center gap-2"
+            >
+              <Send size={18} />
               Envoyer
             </button>
           </div>
