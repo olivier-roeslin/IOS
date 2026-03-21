@@ -1,4 +1,4 @@
-import { AlertCircle, MessageCircle, FileText, Users } from 'lucide-react';
+import { AlertCircle, MessageCircle, FileText, Users, Settings } from 'lucide-react';
 
 export default function Sidebar({ currentPage, onPageChange }) {
   const menuItems = [
@@ -21,6 +21,11 @@ export default function Sidebar({ currentPage, onPageChange }) {
       id: 'contacts',
       label: 'Contacts',
       icon: Users,
+    },
+    {
+      id: 'settings',
+      label: 'Paramètres',
+      icon: Settings,
     },
   ];
 

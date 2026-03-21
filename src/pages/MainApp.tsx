@@ -5,6 +5,7 @@ import ReportPage from './ReportPage';
 import ChatbotPage from './ChatbotPage';
 import DocumentsPage from './DocumentsPage';
 import ContactsPage from './ContactsPage';
+import SettingsPage from './SettingsPage';
 
 export default function MainApp({ session, supabase }) {
   const [currentPage, setCurrentPage] = useState('report');
@@ -36,6 +37,7 @@ export default function MainApp({ session, supabase }) {
           {currentPage === 'chatbot' && <ChatbotPage />}
           {currentPage === 'documents' && <DocumentsPage />}
           {currentPage === 'contacts' && <ContactsPage supabase={supabase} />}
+          {currentPage === 'settings' && <SettingsPage supabase={supabase} session={session} />}
         </main>
       </div>
     </div>
