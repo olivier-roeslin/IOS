@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Mail, RefreshCw } from 'lucide-react';
 
 export default function ReportPage({ supabase, session }) {
   const [title, setTitle] = useState('');
@@ -8,9 +8,14 @@ export default function ReportPage({ supabase, session }) {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([]);
   const [success, setSuccess] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [emailMessages, setEmailMessages] = useState([]);
 
   useEffect(() => {
     loadMessages();
+    loadEmailMessages();
+    const interval = setInterval(syncGmailMessages, 30000);
+
     const channel = supabase
       .channel('reports')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, (payload) => {
@@ -19,6 +24,7 @@ export default function ReportPage({ supabase, session }) {
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -31,6 +37,46 @@ export default function ReportPage({ supabase, session }) {
       .order('created_at', { ascending: false });
 
     setMessages(data || []);
+  };
+
+  const loadEmailMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('received_at', { ascending: true });
+
+      if (error) throw error;
+      setEmailMessages(data || []);
+    } catch (err) {
+      console.error('Error loading email messages:', err);
+    }
+  };
+
+  const syncGmailMessages = async () => {
+    setSyncing(true);
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`,
+        {
+          headers: {
+            Authorization: `Bearer ${currentSession.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        await loadEmailMessages();
+      }
+    } catch (err) {
+      console.error('Error syncing Gmail:', err);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -167,26 +213,65 @@ ${description}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conversation</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Conversation</h2>
+            <button
+              onClick={syncGmailMessages}
+              disabled={syncing}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+              Sync Gmail
+            </button>
+          </div>
           <div className="flex-1 overflow-y-auto space-y-3">
-            {messages.length === 0 ? (
+            {messages.length === 0 && emailMessages.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-8">
-                Sélectionnez un signalement ou envoyez-en un nouveau pour voir la conversation.
+                Aucun message. Envoyez un signalement ou synchronisez vos emails.
               </p>
             ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="bg-blue-50 rounded-lg p-3"
-                >
-                  <p className="text-xs font-semibold text-blue-600 mb-1">Moi</p>
-                  <p className="text-sm text-gray-900">
-                    <strong>{msg.title}</strong>
-                    <br />
-                    {msg.description}
-                  </p>
-                </div>
-              ))
+              <>
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="bg-blue-50 rounded-lg p-3"
+                  >
+                    <p className="text-xs font-semibold text-blue-600 mb-1">Moi</p>
+                    <p className="text-sm text-gray-900">
+                      <strong>{msg.title}</strong>
+                      <br />
+                      {msg.description}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(msg.created_at).toLocaleString('fr-CH')}
+                    </p>
+                  </div>
+                ))}
+                {emailMessages.map((email) => (
+                  <div
+                    key={email.id}
+                    className={`rounded-lg p-3 ${
+                      email.is_sent
+                        ? 'bg-blue-50'
+                        : 'bg-green-50 border border-green-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {!email.is_sent && <Mail size={14} className="text-green-600" />}
+                      <p className="text-xs font-semibold text-gray-700">
+                        {email.is_sent ? 'Moi' : email.from_email}
+                      </p>
+                    </div>
+                    {email.subject && (
+                      <p className="text-xs text-gray-600 mb-1 font-medium">{email.subject}</p>
+                    )}
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{email.body}</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(email.received_at).toLocaleString('fr-CH')}
+                    </p>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>

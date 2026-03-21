@@ -204,6 +204,22 @@ Deno.serve(async (req: Request) => {
 
     await sendEmailViaSMTP(to, subject, message, SMTP_USER, replyTo, SMTP_USER, SMTP_PASSWORD);
 
+    const { error: insertError } = await supabase
+      .from("messages")
+      .insert({
+        user_id: user.id,
+        from_email: SMTP_USER,
+        to_email: to,
+        subject: subject,
+        body: message,
+        is_sent: true,
+        received_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error("Error saving sent message:", insertError);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
