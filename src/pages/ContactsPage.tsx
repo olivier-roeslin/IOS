@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Phone, Mail, ChevronRight, Send } from 'lucide-react';
 
-const EMAIL_DESTINATAIRE = 'tatyanalorenzetti@gmail.com';
+const EMAIL_DESTINATAIRE = 'olivier.roeslin@gmail.com';
 
 const CONTACTS = [
   {
@@ -124,8 +124,8 @@ export default function ContactsPage({ supabase }) {
       if (response.ok && result.success) {
         setEmailStatus('✅ Email envoyé avec succès!');
       } else {
-        const errorMsg = result.error || result.details?.message || 'Erreur inconnue';
-        setEmailStatus(`❌ Erreur: ${errorMsg}`);
+        const errorMsg = result.details?.message || result.error || 'Erreur inconnue';
+        setEmailStatus(`❌ ${errorMsg}`);
         console.error('Détails erreur:', result);
       }
     } catch (error) {
