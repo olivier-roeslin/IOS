@@ -141,10 +141,13 @@ export default function ContactsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{contact.title}</h3>
               <p className="text-sm text-gray-600 mb-4">{contact.name}</p>
               <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-700 flex items-center gap-2 p-2">
+                <a
+                  href={`tel:${contact.phone}`}
+                  className="text-sm text-gray-700 flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition"
+                >
                   <Phone size={16} className="text-blue-600" />
                   {contact.phone}
-                </p>
+                </a>
                 <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
                   <Mail size={16} />
                   Contact via app
@@ -175,10 +178,13 @@ export default function ContactsPage() {
               <p className="text-gray-700 flex items-center gap-2">
                 <span className="font-semibold">Nom:</span> {selectedContact.name}
               </p>
-              <p className="text-gray-700 flex items-center gap-2">
+              <a
+                href={`tel:${selectedContact.phone}`}
+                className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
+              >
                 <Phone size={18} className="text-blue-600" />
                 <span className="font-semibold">Téléphone:</span> {selectedContact.phone}
-              </p>
+              </a>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
                 <span className="font-semibold">Email:</span> {selectedContact.email}
