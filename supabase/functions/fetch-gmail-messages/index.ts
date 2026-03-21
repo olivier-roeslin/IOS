@@ -26,26 +26,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("No authorization header");
+    const { user_id } = await req.json();
+    if (!user_id) {
+      throw new Error("User ID is required");
     }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error("User not authenticated");
-    }
 
     const { data: gmailConfig, error: configError } = await supabase
       .from("gmail_config")
       .select("gmail_user, app_password")
-      .eq("user_id", user.id)
+      .eq("user_id", user_id)
       .maybeSingle();
 
     if (configError || !gmailConfig) {
@@ -106,7 +100,7 @@ Deno.serve(async (req: Request) => {
         const { error: insertError } = await supabase
           .from("messages")
           .upsert({
-            user_id: user.id,
+            user_id: user_id,
             gmail_message_id: detail.id,
             thread_id: detail.threadId,
             from_email: from,
