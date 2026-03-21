@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: gmailConfig, error: configError } = await supabase
       .from("gmail_config")
-      .select("gmail_user, app_password")
+      .select("gmail_user, gmail_app_password")
       .eq("user_id", user_id)
       .maybeSingle();
 
@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Gmail configuration not found");
     }
 
-    const auth = btoa(`${gmailConfig.gmail_user}:${gmailConfig.app_password}`);
+    const auth = btoa(`${gmailConfig.gmail_user}:${gmailConfig.gmail_app_password}`);
     const gmailApiUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 
     const listResponse = await fetch(`${gmailApiUrl}?maxResults=50&q=in:inbox`, {
