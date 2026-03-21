@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,12 +20,14 @@ async function sendEmailViaSMTP(
   subject: string,
   body: string,
   from: string,
-  replyTo?: string
+  replyTo?: string,
+  smtpUser?: string,
+  smtpPassword?: string
 ): Promise<void> {
   const SMTP_HOST = "smtp.gmail.com";
   const SMTP_PORT = 587;
-  const SMTP_USER = Deno.env.get("GMAIL_USER");
-  const SMTP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+  const SMTP_USER = smtpUser || Deno.env.get("GMAIL_USER");
+  const SMTP_PASSWORD = smtpPassword || Deno.env.get("GMAIL_APP_PASSWORD");
 
   if (!SMTP_USER || !SMTP_PASSWORD) {
     throw new Error("SMTP credentials not configured");
@@ -128,8 +131,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const SMTP_USER = Deno.env.get("GMAIL_USER");
-    const SMTP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+    // Récupérer la configuration Gmail depuis la base de données
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: config, error: configError } = await supabase
+      .from("gmail_config")
+      .select("gmail_user, gmail_app_password")
+      .eq("id", 1)
+      .maybeSingle();
+
+    let SMTP_USER = Deno.env.get("GMAIL_USER");
+    let SMTP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
+
+    // Priorité à la configuration de la base de données
+    if (config && !configError) {
+      SMTP_USER = config.gmail_user;
+      SMTP_PASSWORD = config.gmail_app_password;
+    }
 
     if (!SMTP_USER || !SMTP_PASSWORD) {
       console.error("Gmail credentials not configured");
@@ -149,7 +170,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    await sendEmailViaSMTP(to, subject, message, SMTP_USER, replyTo);
+    await sendEmailViaSMTP(to, subject, message, SMTP_USER, replyTo, SMTP_USER, SMTP_PASSWORD);
 
     return new Response(
       JSON.stringify({
