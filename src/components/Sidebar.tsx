@@ -4,7 +4,7 @@ export default function Sidebar({ currentPage, onPageChange }) {
   const menuItems = [
     {
       id: 'report',
-      label: 'Dénoncer une situation',
+      label: 'Dénonciation',
       icon: AlertCircle,
     },
     {
