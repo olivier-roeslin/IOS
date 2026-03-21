@@ -108,6 +108,48 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     const {
       to,
       subject,
@@ -131,7 +173,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Récupérer la configuration Gmail depuis la base de données
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -140,28 +181,16 @@ Deno.serve(async (req: Request) => {
     const { data: config, error: configError } = await supabase
       .from("gmail_config")
       .select("gmail_user, gmail_app_password")
-      .eq("id", 1)
+      .eq("user_id", user.id)
       .maybeSingle();
 
-    let SMTP_USER = Deno.env.get("GMAIL_USER");
-    let SMTP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD");
-
-    // Priorité à la configuration de la base de données
-    if (config && !configError) {
-      SMTP_USER = config.gmail_user;
-      SMTP_PASSWORD = config.gmail_app_password;
-    }
-
-    if (!SMTP_USER || !SMTP_PASSWORD) {
-      console.error("Gmail credentials not configured");
+    if (!config || configError) {
       return new Response(
         JSON.stringify({
-          success: true,
-          message: "Email logged (SMTP not configured)",
-          emailData: { to, subject, message },
+          error: "Gmail configuration not found. Please configure your Gmail settings.",
         }),
         {
-          status: 200,
+          status: 400,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
@@ -169,6 +198,9 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const SMTP_USER = config.gmail_user;
+    const SMTP_PASSWORD = config.gmail_app_password;
 
     await sendEmailViaSMTP(to, subject, message, SMTP_USER, replyTo, SMTP_USER, SMTP_PASSWORD);
 
