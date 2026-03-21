@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Phone, Mail, ChevronRight, Send } from 'lucide-react';
+import { Phone, Mail, ChevronRight, Send, MessageCircle } from 'lucide-react';
 
 const EMAIL_DESTINATAIRE = 'tatyanalorenzetti@gmail.com';
 
@@ -142,16 +142,21 @@ export default function ContactsPage() {
               <p className="text-sm text-gray-600 mb-4">{contact.name}</p>
               <div className="space-y-2 mb-4">
                 <a
+                  href={`https://wa.me/${contact.phone.replace(/\+/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-700 flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition"
+                >
+                  <MessageCircle size={16} className="text-green-600" />
+                  WhatsApp
+                </a>
+                <a
                   href={`tel:${contact.phone}`}
                   className="text-sm text-gray-700 flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition"
                 >
                   <Phone size={16} className="text-blue-600" />
                   {contact.phone}
                 </a>
-                <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
-                  <Mail size={16} />
-                  Contact via app
-                </p>
               </div>
               <button
                 onClick={() => setSelectedContact(contact)}
@@ -178,13 +183,24 @@ export default function ContactsPage() {
               <p className="text-gray-700 flex items-center gap-2">
                 <span className="font-semibold">Nom:</span> {selectedContact.name}
               </p>
-              <a
-                href={`tel:${selectedContact.phone}`}
-                className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
-              >
-                <Phone size={18} className="text-blue-600" />
-                <span className="font-semibold">Téléphone:</span> {selectedContact.phone}
-              </a>
+              <div className="flex items-center gap-4">
+                <a
+                  href={`https://wa.me/${selectedContact.phone.replace(/\+/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-700 flex items-center gap-2 hover:text-green-600 transition"
+                >
+                  <MessageCircle size={18} className="text-green-600" />
+                  <span className="font-semibold">WhatsApp</span>
+                </a>
+                <a
+                  href={`tel:${selectedContact.phone}`}
+                  className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
+                >
+                  <Phone size={18} className="text-blue-600" />
+                  <span className="font-semibold">{selectedContact.phone}</span>
+                </a>
+              </div>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
                 <span className="font-semibold">Email:</span> {selectedContact.email}
