@@ -116,7 +116,7 @@ Description:
 ${description}
         `;
 
-        await fetch(apiUrl, {
+        const emailResponse = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${currentSession?.access_token}`,
@@ -129,8 +129,17 @@ ${description}
             fromName: 'Application Harcèlement - Signalements'
           }),
         });
+
+        if (!emailResponse.ok) {
+          const errorData = await emailResponse.json();
+          console.error('Email sending failed:', errorData);
+          throw new Error(errorData.error || 'Failed to send email');
+        }
+
+        await loadEmailMessages();
       } catch (emailError) {
         console.error('Email sending failed:', emailError);
+        throw emailError;
       }
 
       setSuccess('✅ Signalement envoyé avec succès!');
