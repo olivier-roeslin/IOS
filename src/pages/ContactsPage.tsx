@@ -105,6 +105,9 @@ export default function ContactsPage({ supabase }) {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
       const { data: { session } } = await supabase.auth.getSession();
 
+      console.log('Envoi email à:', selectedContact.email);
+      console.log('Session:', session ? 'Connecté' : 'Non connecté');
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -120,18 +123,22 @@ export default function ContactsPage({ supabase }) {
       });
 
       const result = await response.json();
+      console.log('Réponse complète:', result);
+      console.log('Status:', response.status);
 
       if (response.ok && result.success) {
         setEmailStatus('✅ Email envoyé avec succès!');
       } else {
-        setEmailStatus('⚠️ Message enregistré (email non configuré)');
+        const errorMsg = result.error || result.details?.message || 'Erreur inconnue';
+        setEmailStatus(`❌ Erreur: ${errorMsg}`);
+        console.error('Détails erreur:', result);
       }
     } catch (error) {
       console.error('Error sending email:', error);
-      setEmailStatus('⚠️ Message enregistré localement');
+      setEmailStatus(`❌ Erreur: ${error.message}`);
     } finally {
       setSendingEmail(false);
-      setTimeout(() => setEmailStatus(''), 3000);
+      setTimeout(() => setEmailStatus(''), 5000);
     }
   };
 
