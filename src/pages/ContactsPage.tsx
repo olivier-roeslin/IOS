@@ -103,15 +103,11 @@ export default function ContactsPage({ supabase }) {
 
     try {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
-      const { data: { session } } = await supabase.auth.getSession();
-
-      console.log('Envoi email à:', selectedContact.email);
-      console.log('Session:', session ? 'Connecté' : 'Non connecté');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -123,8 +119,7 @@ export default function ContactsPage({ supabase }) {
       });
 
       const result = await response.json();
-      console.log('Réponse complète:', result);
-      console.log('Status:', response.status);
+      console.log('Réponse:', result);
 
       if (response.ok && result.success) {
         setEmailStatus('✅ Email envoyé avec succès!');
