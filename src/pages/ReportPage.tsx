@@ -59,18 +59,22 @@ export default function ReportPage({ supabase, session }) {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession) return;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`,
-        {
-          headers: {
-            Authorization: `Bearer ${currentSession.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${currentSession.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+      });
 
       if (response.ok) {
         await loadEmailMessages();
+      } else {
+        const errorData = await response.json();
+        console.error('Sync failed:', errorData);
       }
     } catch (err) {
       console.error('Error syncing Gmail:', err);
