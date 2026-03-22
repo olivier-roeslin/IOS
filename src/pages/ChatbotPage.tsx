@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { useLanguage } from '../lib/LanguageContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -7,6 +8,7 @@ interface Message {
 }
 
 export default function ChatbotPage() {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,8 +68,8 @@ tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Assistant juridique</h1>
-        <p className="text-gray-600">Pose une question sur les droits des apprentis en Suisse.</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.chatbot.title}</h1>
+        <p className="text-gray-600">{t.chatbot.description}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6 h-[600px] flex flex-col">
@@ -79,7 +81,7 @@ tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
             <div className="flex items-center justify-center h-full text-gray-500 text-center">
               <div>
                 <p className="text-4xl mb-2">💡</p>
-                <p>Commencez une conversation.</p>
+                <p>{t.chatbot.startConversation}</p>
               </div>
             </div>
           ) : (
@@ -97,7 +99,7 @@ tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
                 >
                   <p className="text-sm">
                     <span className="font-semibold">
-                      {msg.role === 'user' ? 'Vous' : 'Assistant'}:
+                      {msg.role === 'user' ? t.chatbot.you : t.chatbot.assistant}:
                     </span>
                   </p>
                   <p className="text-sm mt-1">{msg.content}</p>
@@ -123,7 +125,7 @@ tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Posez votre question..."
+            placeholder={t.chatbot.placeholder}
             disabled={loading}
             className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           />

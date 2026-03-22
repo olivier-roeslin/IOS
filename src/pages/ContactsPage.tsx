@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Phone, Mail, ChevronRight, Send } from 'lucide-react';
+import { useLanguage } from '../lib/LanguageContext';
 
 const EMAIL_DESTINATAIRE = 'olivier.roeslin@gmail.com';
 
@@ -10,7 +11,7 @@ const CONTACTS = [
     name: 'Dr. Marie Dubois',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'Soutien',
+    category: 'support',
   },
   {
     id: 2,
@@ -18,7 +19,7 @@ const CONTACTS = [
     name: 'Me. Jean-Pierre Martin',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'Juridique',
+    category: 'legal',
   },
   {
     id: 3,
@@ -26,7 +27,7 @@ const CONTACTS = [
     name: 'Sophie Müller',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'École',
+    category: 'school',
   },
   {
     id: 4,
@@ -34,7 +35,7 @@ const CONTACTS = [
     name: 'Ligne d\'écoute 24/7',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'Urgence',
+    category: 'urgent',
   },
   {
     id: 5,
@@ -42,7 +43,7 @@ const CONTACTS = [
     name: 'Dr. Paul Fontaine',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'Soutien',
+    category: 'support',
   },
   {
     id: 6,
@@ -50,7 +51,7 @@ const CONTACTS = [
     name: 'Police cantonale',
     phone: '117',
     email: EMAIL_DESTINATAIRE,
-    category: 'Urgence',
+    category: 'urgent',
   },
   {
     id: 7,
@@ -58,7 +59,7 @@ const CONTACTS = [
     name: 'Me. Claire Rochat',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'Juridique',
+    category: 'legal',
   },
   {
     id: 8,
@@ -66,22 +67,29 @@ const CONTACTS = [
     name: 'M. Bernard Favre',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
-    category: 'École',
+    category: 'school',
   },
 ];
 
-const CATEGORIES = ['Tous', 'Urgence', 'Juridique', 'École', 'Soutien'];
-
 export default function ContactsPage({ supabase }) {
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
+  const { t } = useLanguage();
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedContact, setSelectedContact] = useState<typeof CONTACTS[0] | null>(null);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Record<number, Array<{ text: string; date: Date }>>>({});
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
 
+  const categories = [
+    { key: 'all', label: t.contacts.all },
+    { key: 'urgent', label: t.contacts.urgent },
+    { key: 'legal', label: t.contacts.legal },
+    { key: 'school', label: t.contacts.school },
+    { key: 'support', label: t.contacts.support },
+  ];
+
   const filteredContacts =
-    selectedCategory === 'Tous'
+    selectedCategory === 'all'
       ? CONTACTS
       : CONTACTS.filter((c) => c.category === selectedCategory);
 
@@ -119,18 +127,15 @@ export default function ContactsPage({ supabase }) {
       });
 
       const result = await response.json();
-      console.log('Réponse:', result);
 
       if (response.ok && result.success) {
-        setEmailStatus('✅ Email envoyé avec succès!');
+        setEmailStatus(t.contacts.successSent);
       } else {
         const errorMsg = result.details?.message || result.error || 'Erreur inconnue';
-        setEmailStatus(`❌ ${errorMsg}`);
-        console.error('Détails erreur:', result);
+        setEmailStatus(`${t.contacts.errorPrefix} ${errorMsg}`);
       }
     } catch (error) {
-      console.error('Error sending email:', error);
-      setEmailStatus(`❌ Erreur: ${error.message}`);
+      setEmailStatus(`${t.contacts.errorPrefix} ${error.message}`);
     } finally {
       setSendingEmail(false);
       setTimeout(() => setEmailStatus(''), 5000);
@@ -140,23 +145,23 @@ export default function ContactsPage({ supabase }) {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Contacts</h1>
-        <p className="text-gray-600">Choisis une catégorie puis ouvre un contact.</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.contacts.title}</h1>
+        <p className="text-gray-600">{t.contacts.description}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex gap-3 flex-wrap">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.key}
+              onClick={() => setSelectedCategory(cat.key)}
               className={`px-4 py-2 rounded-md font-medium transition ${
-                selectedCategory === cat
+                selectedCategory === cat.key
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
               }`}
             >
-              {cat}
+              {cat.label}
             </button>
           ))}
         </div>
@@ -181,14 +186,14 @@ export default function ContactsPage({ supabase }) {
                 </a>
                 <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
                   <Mail size={16} />
-                  Contact via app
+                  {t.contacts.contactViaApp}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedContact(contact)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition text-sm flex items-center justify-center gap-2"
               >
-                Contacter
+                {t.contacts.contactButton}
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -200,36 +205,36 @@ export default function ContactsPage({ supabase }) {
             onClick={() => setSelectedContact(null)}
             className="mb-6 text-blue-600 hover:text-blue-700 font-medium"
           >
-            ← Retour
+            ← {t.contacts.back}
           </button>
 
           <div className="bg-blue-50 rounded-lg p-6 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedContact.title}</h2>
             <div className="space-y-3">
               <p className="text-gray-700 flex items-center gap-2">
-                <span className="font-semibold">Nom:</span> {selectedContact.name}
+                <span className="font-semibold">{t.contacts.name}</span> {selectedContact.name}
               </p>
               <a
                 href={`tel:${selectedContact.phone}`}
                 className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
               >
                 <Phone size={18} className="text-blue-600" />
-                <span className="font-semibold">Téléphone:</span> {selectedContact.phone}
+                <span className="font-semibold">{t.contacts.phone}</span> {selectedContact.phone}
               </a>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
-                <span className="font-semibold">Email:</span> {selectedContact.email}
+                <span className="font-semibold">{t.contacts.email}</span> {selectedContact.email}
               </p>
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Historique</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t.contacts.history}</h3>
 
           <div className="mb-6 space-y-3 max-h-96 overflow-y-auto">
             {messages[selectedContact.id]?.length > 0 ? (
               messages[selectedContact.id].map((msg, idx) => (
                 <div key={idx} className="bg-blue-600 text-white rounded-lg p-4">
-                  <p className="text-xs font-semibold mb-2">Moi</p>
+                  <p className="text-xs font-semibold mb-2">{t.contacts.noMessages.split(' ')[0]}</p>
                   <p className="text-sm">{msg.text}</p>
                   <p className="text-xs text-blue-100 mt-2">
                     {msg.date.toLocaleString('fr-CH')}
@@ -238,7 +243,7 @@ export default function ContactsPage({ supabase }) {
               ))
             ) : (
               <p className="text-gray-600">
-                Aucun message encore. Écris à {selectedContact.name} ci-dessous.
+                {t.contacts.noMessages} {selectedContact.name}.
               </p>
             )}
           </div>
@@ -255,7 +260,7 @@ export default function ContactsPage({ supabase }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={`Écrire à ${selectedContact.name}...`}
+              placeholder={`${t.contacts.writeTo} ${selectedContact.name}...`}
               className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
@@ -264,7 +269,7 @@ export default function ContactsPage({ supabase }) {
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition disabled:opacity-50 flex items-center gap-2"
             >
               <Send size={18} />
-              Envoyer
+              {t.contacts.send}
             </button>
           </div>
         </div>

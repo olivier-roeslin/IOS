@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Send, Mail, RefreshCw } from 'lucide-react';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function ReportPage({ supabase, session }) {
+  const { t } = useLanguage();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [anonymous, setAnonymous] = useState(false);
@@ -146,14 +148,14 @@ ${description}
         throw emailError;
       }
 
-      setSuccess('✅ Signalement envoyé avec succès!');
+      setSuccess(t.report.successSent);
       setTitle('');
       setDescription('');
       setAnonymous(false);
       setTimeout(() => setSuccess(''), 3000);
       loadMessages();
     } catch (err) {
-      setSuccess(`❌ Erreur: ${err.message}`);
+      setSuccess(`${t.report.errorPrefix} ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -162,30 +164,30 @@ ${description}
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Nouveau signalement</h1>
-        <p className="text-gray-600">Décris la situation. Tu peux envoyer le message de manière anonyme.</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.report.title}</h1>
+        <p className="text-gray-600">{t.report.description}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Titre</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">{t.report.titleLabel}</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre du signalement"
+                placeholder={t.report.titlePlaceholder}
                 className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Description</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">{t.report.descriptionLabel}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description détaillée de la situation..."
+                placeholder={t.report.descriptionPlaceholder}
                 rows={6}
                 className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
@@ -200,12 +202,12 @@ ${description}
                 className="w-4 h-4"
               />
               <label htmlFor="anonymous" className="text-sm text-gray-700">
-                Signalement anonyme
+                {t.report.anonymous}
               </label>
             </div>
 
             <p className="text-sm text-gray-600">
-              {anonymous ? '🔒 Envoi anonyme — votre email sera masqué' : `📧 Envoyé depuis : ${session.user.email}`}
+              {anonymous ? t.report.anonymousSending : `${t.report.sentFrom} ${session.user.email}`}
             </p>
 
             {success && (
@@ -220,27 +222,27 @@ ${description}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Send size={18} />
-              {loading ? 'Envoi...' : 'Créer un signalement'}
+              {loading ? t.report.sending : t.report.createButton}
             </button>
           </form>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Conversation</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t.report.conversationTitle}</h2>
             <button
               onClick={syncGmailMessages}
               disabled={syncing}
               className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
             >
               <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-              Sync Gmail
+              {t.report.syncGmail}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.length === 0 && emailMessages.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-8">
-                Aucun message. Envoyez un signalement ou synchronisez vos emails.
+                {t.report.noMessages}
               </p>
             ) : (
               <>
@@ -249,7 +251,7 @@ ${description}
                     key={msg.id}
                     className="bg-blue-50 rounded-lg p-3"
                   >
-                    <p className="text-xs font-semibold text-blue-600 mb-1">Moi</p>
+                    <p className="text-xs font-semibold text-blue-600 mb-1">{t.report.me}</p>
                     <p className="text-sm text-gray-900">
                       <strong>{msg.title}</strong>
                       <br />
@@ -272,7 +274,7 @@ ${description}
                     <div className="flex items-center gap-2 mb-1">
                       {!email.is_sent && <Mail size={14} className="text-green-600" />}
                       <p className="text-xs font-semibold text-gray-700">
-                        {email.is_sent ? 'Moi' : email.from_email}
+                        {email.is_sent ? t.report.me : email.from_email}
                       </p>
                     </div>
                     {email.subject && (

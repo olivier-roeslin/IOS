@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, ExternalLink, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { useLanguage } from '../lib/LanguageContext';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -22,6 +23,7 @@ const DOCUMENTS = [
 ];
 
 export default function DocumentsPage() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [numPages, setNumPages] = useState(null);
@@ -121,7 +123,7 @@ export default function DocumentsPage() {
               className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
             >
               <ChevronLeft size={20} />
-              Retour aux documents
+              {t.documents.backToDocuments}
             </button>
             <h2 className="text-lg font-semibold text-gray-900 flex-1 mx-4">{selectedDoc.title}</h2>
           </div>
@@ -133,7 +135,7 @@ export default function DocumentsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Rechercher dans ce document..."
+                placeholder={t.documents.searchPlaceholder}
                 className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
@@ -142,7 +144,7 @@ export default function DocumentsPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition disabled:opacity-50 flex items-center gap-2"
               >
                 <Search size={18} />
-                {isSearching ? 'Recherche...' : 'Rechercher'}
+                {isSearching ? t.documents.searching : t.documents.searchButton}
               </button>
             </div>
 
@@ -179,7 +181,7 @@ export default function DocumentsPage() {
                 <ChevronLeft size={18} />
               </button>
               <span className="text-sm font-medium text-gray-900">
-                Page {pageNumber} / {numPages || '?'}
+                {t.documents.page} {pageNumber} / {numPages || '?'}
               </span>
               <button
                 onClick={() => setPageNumber(Math.min(numPages || 1, pageNumber + 1))}
@@ -208,8 +210,8 @@ export default function DocumentsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Documents</h1>
-        <p className="text-gray-600">Choisis un document pour le lire ou le rechercher.</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.documents.title}</h1>
+        <p className="text-gray-600">{t.documents.description}</p>
       </div>
 
       <div className="space-y-4">
@@ -227,14 +229,14 @@ export default function DocumentsPage() {
                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition"
                     >
                       <FileText size={16} />
-                      Lire dans l'app
+                      {t.documents.readInApp}
                     </button>
                     <button
                       onClick={() => openExternal(doc)}
                       className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-md transition"
                     >
                       <ExternalLink size={16} />
-                      Ouvrir
+                      {t.documents.open}
                     </button>
                   </div>
                 </div>
