@@ -8,7 +8,7 @@ interface Message {
 }
 
 export default function ChatbotPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,6 +32,33 @@ export default function ChatbotPage() {
     try {
       const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
+      const systemPrompts = {
+        fr: `Tu es un assistant juridique pour apprentis en Suisse.
+Tu aides les apprentis à comprendre leurs droits.
+Tu réponds en français clair, simple et concis.
+Tu te bases sur le droit suisse de la formation professionnelle.
+Si quelqu'un parle de harcèlement, d'abus ou de situation grave,
+tu l'encourages à utiliser l'onglet 'Rapport'.`,
+        en: `You are a legal assistant for apprentices in Switzerland.
+You help apprentices understand their rights.
+You respond in clear, simple, and concise English.
+You base your answers on Swiss vocational training law.
+If someone mentions harassment, abuse, or a serious situation,
+encourage them to use the 'Report' tab.`,
+        es: `Eres un asistente legal para aprendices en Suiza.
+Ayudas a los aprendices a entender sus derechos.
+Respondes en español claro, simple y conciso.
+Te basas en la ley suiza de formación profesional.
+Si alguien menciona acoso, abuso o una situación grave,
+anímalo a usar la pestaña 'Informe'.`,
+        it: `Sei un assistente legale per apprendisti in Svizzera.
+Aiuti gli apprendisti a comprendere i loro diritti.
+Rispondi in italiano chiaro, semplice e conciso.
+Ti basi sulla legge svizzera della formazione professionale.
+Se qualcuno menziona molestie, abusi o una situazione grave,
+incoraggialo a usare la scheda 'Rapporto'.`
+      };
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -42,12 +69,7 @@ export default function ChatbotPage() {
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 900,
-          system: `Tu es un assistant juridique pour apprentis en Suisse.
-Tu aides les apprentis à comprendre leurs droits.
-Tu réponds en français clair, simple et concis.
-Tu te bases sur le droit suisse de la formation professionnelle.
-Si quelqu'un parle de harcèlement, d'abus ou de situation grave,
-tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
+          system: systemPrompts[language] || systemPrompts.fr,
           messages: [...messages, { role: 'user', content: userMessage }],
         }),
       });
@@ -56,9 +78,15 @@ tu l'encourages à utiliser l'onglet 'Dénoncer une situation'.`,
       const assistantMessage = data.content[0].text;
       setMessages((prev) => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (err) {
+      const errorMessages = {
+        fr: 'Erreur:',
+        en: 'Error:',
+        es: 'Error:',
+        it: 'Errore:'
+      };
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: `Erreur: ${err.message}` },
+        { role: 'assistant', content: `${errorMessages[language] || 'Erreur:'} ${err.message}` },
       ]);
     } finally {
       setLoading(false);

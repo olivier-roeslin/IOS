@@ -4,10 +4,10 @@ import { useLanguage } from '../lib/LanguageContext';
 
 const EMAIL_DESTINATAIRE = 'olivier.roeslin@gmail.com';
 
-const CONTACTS = [
+const getContacts = (t) => [
   {
     id: 1,
-    title: 'Psychologue',
+    titleKey: 'psychologist',
     name: 'Dr. Marie Dubois',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -15,7 +15,7 @@ const CONTACTS = [
   },
   {
     id: 2,
-    title: 'Assistant juridique',
+    titleKey: 'legalAssistant',
     name: 'Me. Jean-Pierre Martin',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -23,7 +23,7 @@ const CONTACTS = [
   },
   {
     id: 3,
-    title: 'Commissaire d\'apprentissage',
+    titleKey: 'apprenticeshipCommissioner',
     name: 'Sophie Müller',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -31,15 +31,15 @@ const CONTACTS = [
   },
   {
     id: 4,
-    title: 'Aide au harcèlement',
-    name: 'Ligne d\'écoute 24/7',
+    titleKey: 'harassmentHelp',
+    nameKey: 'helpline247',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
     category: 'urgent',
   },
   {
     id: 5,
-    title: 'Médecin scolaire',
+    titleKey: 'schoolDoctor',
     name: 'Dr. Paul Fontaine',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -47,15 +47,15 @@ const CONTACTS = [
   },
   {
     id: 6,
-    title: 'Police secours',
-    name: 'Police cantonale',
+    titleKey: 'policeEmergency',
+    nameKey: 'cantonalPolice',
     phone: '117',
     email: EMAIL_DESTINATAIRE,
     category: 'urgent',
   },
   {
     id: 7,
-    title: 'Avocat apprentis',
+    titleKey: 'apprenticeLawyer',
     name: 'Me. Claire Rochat',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -63,7 +63,7 @@ const CONTACTS = [
   },
   {
     id: 8,
-    title: 'Directeur école',
+    titleKey: 'schoolDirector',
     name: 'M. Bernard Favre',
     phone: '+41774236788',
     email: EMAIL_DESTINATAIRE,
@@ -74,6 +74,7 @@ const CONTACTS = [
 export default function ContactsPage({ supabase }) {
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const CONTACTS = getContacts(t);
   const [selectedContact, setSelectedContact] = useState<typeof CONTACTS[0] | null>(null);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Record<number, Array<{ text: string; date: Date }>>>({});
@@ -120,9 +121,9 @@ export default function ContactsPage({ supabase }) {
         },
         body: JSON.stringify({
           to: selectedContact.email,
-          subject: `Message pour ${selectedContact.title}`,
+          subject: `Message pour ${t.contacts[selectedContact.titleKey]}`,
           message: messageText,
-          fromName: 'Application Harcèlement'
+          fromName: 'AbusePas'
         }),
       });
 
@@ -174,8 +175,8 @@ export default function ContactsPage({ supabase }) {
               key={contact.id}
               className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{contact.title}</h3>
-              <p className="text-sm text-gray-600 mb-4">{contact.name}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t.contacts[contact.titleKey]}</h3>
+              <p className="text-sm text-gray-600 mb-4">{contact.nameKey ? t.contacts[contact.nameKey] : contact.name}</p>
               <div className="space-y-2 mb-4">
                 <a
                   href={`tel:${contact.phone}`}
@@ -209,21 +210,21 @@ export default function ContactsPage({ supabase }) {
           </button>
 
           <div className="bg-blue-50 rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedContact.title}</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t.contacts[selectedContact.titleKey]}</h2>
             <div className="space-y-3">
               <p className="text-gray-700 flex items-center gap-2">
-                <span className="font-semibold">{t.contacts.name}</span> {selectedContact.name}
+                <span className="font-semibold">{t.contacts.name}:</span> {selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}
               </p>
               <a
                 href={`tel:${selectedContact.phone}`}
                 className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
               >
                 <Phone size={18} className="text-blue-600" />
-                <span className="font-semibold">{t.contacts.phone}</span> {selectedContact.phone}
+                <span className="font-semibold">{t.contacts.phone}:</span> {selectedContact.phone}
               </a>
               <p className="text-gray-700 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
-                <span className="font-semibold">{t.contacts.email}</span> {selectedContact.email}
+                <span className="font-semibold">{t.contacts.email}:</span> {selectedContact.email}
               </p>
             </div>
           </div>
@@ -243,7 +244,7 @@ export default function ContactsPage({ supabase }) {
               ))
             ) : (
               <p className="text-gray-600">
-                {t.contacts.noMessages} {selectedContact.name}.
+                {t.contacts.noMessages} {selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}.
               </p>
             )}
           </div>
@@ -260,7 +261,7 @@ export default function ContactsPage({ supabase }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={`${t.contacts.writeTo} ${selectedContact.name}...`}
+              placeholder={`${t.contacts.writeTo} ${selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}...`}
               className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
