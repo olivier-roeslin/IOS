@@ -199,7 +199,16 @@ export default function DocumentsPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    if (allMatches.length > 0) {
+                      e.preventDefault();
+                      nextSearchResult();
+                    } else {
+                      handleSearch();
+                    }
+                  }
+                }}
                 placeholder={t.documents.searchPlaceholder}
                 className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
