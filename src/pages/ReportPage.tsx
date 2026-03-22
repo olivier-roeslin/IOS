@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Mail, RefreshCw } from 'lucide-react';
+import { Send, Mail, RefreshCw, Trash2 } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 
 export default function ReportPage({ supabase, session }) {
@@ -82,6 +82,33 @@ export default function ReportPage({ supabase, session }) {
       console.error('Error syncing Gmail:', err);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!confirm(t.report.confirmDelete)) return;
+
+    try {
+      const { error: reportsError } = await supabase
+        .from('reports')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (reportsError) throw reportsError;
+
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (messagesError) throw messagesError;
+
+      setMessages([]);
+      setEmailMessages([]);
+      setSuccess('✅ Conversation supprimée avec succès!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setSuccess(`${t.report.errorPrefix} ${err.message}`);
     }
   };
 
@@ -230,14 +257,23 @@ ${description}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.report.conversationTitle}</h2>
-            <button
-              onClick={syncGmailMessages}
-              disabled={syncing}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
-            >
-              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-              {t.report.syncGmail}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={syncGmailMessages}
+                disabled={syncing}
+                className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                {t.report.syncGmail}
+              </button>
+              <button
+                onClick={handleDeleteConversation}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                {t.report.deleteConversation}
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.length === 0 && emailMessages.length === 0 ? (

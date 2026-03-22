@@ -94,6 +94,8 @@ export const translations = {
       syncing: 'Synchronisation...',
       noMessages: 'Aucun message pour le moment',
       me: 'Moi',
+      deleteConversation: 'Supprimer la conversation',
+      confirmDelete: 'Êtes-vous sûr de vouloir supprimer toute la conversation?',
     },
     chatbot: {
       title: 'Assistant IA',
@@ -104,6 +106,8 @@ export const translations = {
       startConversation: 'Commencez la conversation',
       you: 'Vous',
       assistant: 'Assistant',
+      deleteMessages: 'Supprimer les messages',
+      confirmDelete: 'Êtes-vous sûr de vouloir supprimer tous les messages?',
     },
     contacts: {
       title: 'Contacts utiles',

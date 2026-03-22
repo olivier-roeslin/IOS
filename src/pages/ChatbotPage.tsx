@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 
 interface Message {
@@ -19,6 +19,12 @@ export default function ChatbotPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleDeleteMessages = () => {
+    if (confirm(t.chatbot.confirmDelete)) {
+      setMessages([]);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,9 +78,20 @@ export default function ChatbotPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.chatbot.title}</h1>
-        <p className="text-gray-600 dark:text-gray-400">{t.chatbot.description}</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.chatbot.title}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t.chatbot.description}</p>
+        </div>
+        {messages.length > 0 && (
+          <button
+            onClick={handleDeleteMessages}
+            className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-md transition flex items-center gap-2"
+          >
+            <Trash2 size={16} />
+            {t.chatbot.deleteMessages}
+          </button>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 h-[600px] flex flex-col">
