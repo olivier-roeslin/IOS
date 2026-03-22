@@ -267,25 +267,23 @@ ${description}
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.report.conversationTitle}</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={syncGmailMessages}
-                disabled={syncing}
-                className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
-              >
-                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-                {t.report.syncGmail}
-              </button>
-              <button
-                onClick={handleDeleteConversation}
-                className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
-              >
-                <Trash2 size={14} />
-                {t.report.deleteConversation}
-              </button>
-            </div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t.report.conversationTitle}</h2>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={syncGmailMessages}
+              disabled={syncing}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+              {t.report.syncGmail}
+            </button>
+            <button
+              onClick={handleDeleteConversation}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md transition flex items-center gap-1.5"
+            >
+              <Trash2 size={14} />
+              {t.report.deleteConversation}
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.length === 0 && emailMessages.length === 0 ? (
