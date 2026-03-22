@@ -123,7 +123,7 @@ export default function SettingsPage({ supabase, session }) {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save size={18} />
-            {loading ? 'Enregistrement...' : hasConfig ? 'Mettre à jour le mot de passe' : 'Se connecter'}
+            {loading ? 'Enregistrement...' : hasConfig ? 'Mettre à jour' : 'Se connecter'}
           </button>
         </form>
 
