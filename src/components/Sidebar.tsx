@@ -7,7 +7,7 @@ export default function Sidebar({ currentPage, onPageChange }) {
   const menuItems = [
     {
       id: 'report',
-      label: 'Dénonciation',
+      label: t.sidebar.report,
       icon: AlertCircle,
     },
     {
