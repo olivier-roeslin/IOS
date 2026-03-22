@@ -62,6 +62,15 @@ export default function DocumentsPage() {
     setAllMatches([]);
   };
 
+  const scrollToHighlight = useCallback(() => {
+    setTimeout(() => {
+      const highlight = document.querySelector('mark[style*="background-color: #60A5FA"]');
+      if (highlight) {
+        highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
+  }, []);
+
   const handleSearch = async () => {
     if (!searchTerm.trim() || !pdfDocument) return;
 
@@ -94,6 +103,7 @@ export default function DocumentsPage() {
       setCurrentSearchIndex(0);
       if (matches.length > 0) {
         setPageNumber(matches[0].page);
+        scrollToHighlight();
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -107,14 +117,16 @@ export default function DocumentsPage() {
     const nextIndex = (currentSearchIndex + 1) % allMatches.length;
     setCurrentSearchIndex(nextIndex);
     setPageNumber(allMatches[nextIndex].page);
-  }, [allMatches, currentSearchIndex]);
+    scrollToHighlight();
+  }, [allMatches, currentSearchIndex, scrollToHighlight]);
 
   const prevSearchResult = useCallback(() => {
     if (allMatches.length === 0) return;
     const prevIndex = currentSearchIndex === 0 ? allMatches.length - 1 : currentSearchIndex - 1;
     setCurrentSearchIndex(prevIndex);
     setPageNumber(allMatches[prevIndex].page);
-  }, [allMatches, currentSearchIndex]);
+    scrollToHighlight();
+  }, [allMatches, currentSearchIndex, scrollToHighlight]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
