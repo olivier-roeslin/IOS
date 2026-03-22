@@ -30,53 +30,29 @@ export default function ChatbotPage() {
     setLoading(true);
 
     try {
-      const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot`;
 
-      const systemPrompts = {
-        fr: `Tu es un assistant juridique pour apprentis en Suisse.
-Tu aides les apprentis à comprendre leurs droits.
-Tu réponds en français clair, simple et concis.
-Tu te bases sur le droit suisse de la formation professionnelle.
-Si quelqu'un parle de harcèlement, d'abus ou de situation grave,
-tu l'encourages à utiliser l'onglet 'Rapport'.`,
-        en: `You are a legal assistant for apprentices in Switzerland.
-You help apprentices understand their rights.
-You respond in clear, simple, and concise English.
-You base your answers on Swiss vocational training law.
-If someone mentions harassment, abuse, or a serious situation,
-encourage them to use the 'Report' tab.`,
-        es: `Eres un asistente legal para aprendices en Suiza.
-Ayudas a los aprendices a entender sus derechos.
-Respondes en español claro, simple y conciso.
-Te basas en la ley suiza de formación profesional.
-Si alguien menciona acoso, abuso o una situación grave,
-anímalo a usar la pestaña 'Informe'.`,
-        it: `Sei un assistente legale per apprendisti in Svizzera.
-Aiuti gli apprendisti a comprendere i loro diritti.
-Rispondi in italiano chiaro, semplice e conciso.
-Ti basi sulla legge svizzera della formazione professionale.
-Se qualcuno menziona molestie, abusi o una situazione grave,
-incoraggialo a usare la scheda 'Rapporto'.`
+      const headers = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
       };
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
+        headers,
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 900,
-          system: systemPrompts[language] || systemPrompts.fr,
           messages: [...messages, { role: 'user', content: userMessage }],
+          language,
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch response');
+      }
+
       const data = await response.json();
-      const assistantMessage = data.content[0].text;
-      setMessages((prev) => [...prev, { role: 'assistant', content: assistantMessage }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.message }]);
     } catch (err) {
       const errorMessages = {
         fr: 'Erreur:',
