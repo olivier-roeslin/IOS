@@ -99,13 +99,13 @@ export default function SettingsPage({ supabase, session }) {
 
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Mot de passe
+              {hasConfig ? 'Nouveau mot de passe' : 'Mot de passe'}
             </label>
             <input
               type="password"
               value={gmailPassword}
               onChange={(e) => setGmailPassword(e.target.value)}
-              placeholder="Entrez votre mot de passe"
+              placeholder={hasConfig ? "Entrez le nouveau mot de passe" : "Entrez votre mot de passe"}
               className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
