@@ -1,92 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Mail, Save, Languages, Moon, Bell } from 'lucide-react';
+import { useState } from 'react';
+import { Languages, Moon, Bell } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 import { useTheme } from '../lib/ThemeContext';
 import { languageNames, Language } from '../lib/translations';
 
-export default function SettingsPage({ supabase, session }) {
+export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const [gmailUser, setGmailUser] = useState('');
-  const [gmailPassword, setGmailPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [hasConfig, setHasConfig] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('notificationsEnabled');
     return saved === 'true';
   });
 
-  useEffect(() => {
-    loadGmailConfig();
-  }, []);
-
   const handleNotificationsToggle = () => {
     const newValue = !notificationsEnabled;
     setNotificationsEnabled(newValue);
     localStorage.setItem('notificationsEnabled', String(newValue));
-  };
-
-  const loadGmailConfig = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('gmail_config')
-        .select('gmail_user')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setGmailUser(data.gmail_user);
-        setHasConfig(true);
-      }
-    } catch (err) {
-      console.error('Error loading Gmail config:', err);
-    }
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    if (!gmailUser.trim() || !gmailPassword.trim()) {
-      setMessage(t.settings.fillAllFields);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/configure-gmail`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: session.user.id,
-          gmail_user: gmailUser,
-          gmail_app_password: gmailPassword,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || t.settings.configError);
-      }
-
-      setMessage(t.settings.success);
-      setHasConfig(true);
-      setGmailPassword('');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage(`${t.settings.error} ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -169,67 +98,6 @@ export default function SettingsPage({ supabase, session }) {
               />
             </button>
           </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Mail size={20} className="text-gray-700 dark:text-gray-300" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.settings.gmailSection}</h2>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t.settings.description}</p>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t.settings.gmailAddress}
-              </label>
-              <input
-                type="email"
-                value={gmailUser}
-                onChange={(e) => setGmailUser(e.target.value)}
-                placeholder={t.settings.emailPlaceholder}
-                className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t.settings.password}
-              </label>
-              <input
-                type="password"
-                value={gmailPassword}
-                onChange={(e) => setGmailPassword(e.target.value)}
-                placeholder={t.settings.passwordPlaceholder}
-                className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                required
-              />
-            </div>
-
-            {message && (
-              <div className={`p-3 rounded-md text-sm ${message.includes(t.settings.success) || message.includes('success') ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Save size={18} />
-              {loading ? t.settings.saving : hasConfig ? t.settings.update : t.settings.connect}
-            </button>
-          </form>
-
-          {hasConfig && (
-            <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
-              <div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-                <Mail size={18} />
-                <span className="font-semibold">{t.settings.connectedWith} {gmailUser}</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
