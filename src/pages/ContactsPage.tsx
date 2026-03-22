@@ -146,11 +146,11 @@ export default function ContactsPage({ supabase }) {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.contacts.title}</h1>
-        <p className="text-gray-600">{t.contacts.description}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.contacts.title}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t.contacts.description}</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
         <div className="flex gap-3 flex-wrap">
           {categories.map((cat) => (
             <button
@@ -159,7 +159,7 @@ export default function ContactsPage({ supabase }) {
               className={`px-4 py-2 rounded-md font-medium transition ${
                 selectedCategory === cat.key
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {cat.label}
@@ -173,19 +173,19 @@ export default function ContactsPage({ supabase }) {
           {filteredContacts.map((contact) => (
             <div
               key={contact.id}
-              className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t.contacts[contact.titleKey]}</h3>
-              <p className="text-sm text-gray-600 mb-4">{contact.nameKey ? t.contacts[contact.nameKey] : contact.name}</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t.contacts[contact.titleKey]}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{contact.nameKey ? t.contacts[contact.nameKey] : contact.name}</p>
               <div className="space-y-2 mb-4">
                 <a
                   href={`tel:${contact.phone}`}
-                  className="text-sm text-gray-700 flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition"
+                  className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-md transition"
                 >
                   <Phone size={16} className="text-blue-600" />
                   {contact.phone}
                 </a>
-                <p className="text-sm text-gray-600 flex items-center gap-2 p-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2 p-2">
                   <Mail size={16} />
                   {t.contacts.contactViaApp}
                 </p>
@@ -201,7 +201,7 @@ export default function ContactsPage({ supabase }) {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <button
             onClick={() => setSelectedContact(null)}
             className="mb-6 text-blue-600 hover:text-blue-700 font-medium"
@@ -209,27 +209,27 @@ export default function ContactsPage({ supabase }) {
             ← {t.contacts.back}
           </button>
 
-          <div className="bg-blue-50 rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t.contacts[selectedContact.titleKey]}</h2>
+          <div className="bg-blue-50 dark:bg-gray-900 rounded-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{t.contacts[selectedContact.titleKey]}</h2>
             <div className="space-y-3">
-              <p className="text-gray-700 flex items-center gap-2">
+              <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <span className="font-semibold">{t.contacts.name}:</span> {selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}
               </p>
               <a
                 href={`tel:${selectedContact.phone}`}
-                className="text-gray-700 flex items-center gap-2 hover:text-blue-600 transition"
+                className="text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:text-blue-600 transition"
               >
                 <Phone size={18} className="text-blue-600" />
                 <span className="font-semibold">{t.contacts.phone}:</span> {selectedContact.phone}
               </a>
-              <p className="text-gray-700 flex items-center gap-2">
+              <p className="text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <Mail size={18} className="text-blue-600" />
                 <span className="font-semibold">{t.contacts.email}:</span> {selectedContact.email}
               </p>
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t.contacts.history}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.contacts.history}</h3>
 
           <div className="mb-6 space-y-3 max-h-96 overflow-y-auto">
             {messages[selectedContact.id]?.length > 0 ? (
@@ -243,7 +243,7 @@ export default function ContactsPage({ supabase }) {
                 </div>
               ))
             ) : (
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 {t.contacts.noMessages} {selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}.
               </p>
             )}
@@ -262,7 +262,7 @@ export default function ContactsPage({ supabase }) {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder={`${t.contacts.writeTo} ${selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name}...`}
-              className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={handleSendMessage}

@@ -96,11 +96,11 @@ incoraggialo a usare la scheda 'Rapporto'.`
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.chatbot.title}</h1>
-        <p className="text-gray-600">{t.chatbot.description}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.chatbot.title}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t.chatbot.description}</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 h-[600px] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 h-[600px] flex flex-col">
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto space-y-4 mb-6"
@@ -122,7 +122,7 @@ incoraggialo a usare la scheda 'Rapporto'.`
                   className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3 rounded-lg ${
                     msg.role === 'user'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                   }`}
                 >
                   <p className="text-sm">
@@ -137,7 +137,7 @@ incoraggialo a usare la scheda 'Rapporto'.`
           )}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 text-gray-900 px-4 py-3 rounded-lg">
+              <div className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-3 rounded-lg">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -155,7 +155,7 @@ incoraggialo a usare la scheda 'Rapporto'.`
             onChange={(e) => setInput(e.target.value)}
             placeholder={t.chatbot.placeholder}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           />
           <button
             type="submit"

@@ -164,32 +164,32 @@ ${description}
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.report.title}</h1>
-        <p className="text-gray-600">{t.report.description}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.report.title}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t.report.description}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">{t.report.titleLabel}</label>
+              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{t.report.titleLabel}</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t.report.titlePlaceholder}
-                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">{t.report.descriptionLabel}</label>
+              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{t.report.descriptionLabel}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t.report.descriptionPlaceholder}
                 rows={6}
-                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
 
@@ -201,12 +201,12 @@ ${description}
                 onChange={(e) => setAnonymous(e.target.checked)}
                 className="w-4 h-4"
               />
-              <label htmlFor="anonymous" className="text-sm text-gray-700">
+              <label htmlFor="anonymous" className="text-sm text-gray-700 dark:text-gray-300">
                 {t.report.anonymous}
               </label>
             </div>
 
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {anonymous ? t.report.anonymousSending : `${t.report.sentFrom} ${session.user.email}`}
             </p>
 
@@ -227,9 +227,9 @@ ${description}
           </form>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 flex flex-col">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t.report.conversationTitle}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.report.conversationTitle}</h2>
             <button
               onClick={syncGmailMessages}
               disabled={syncing}
@@ -241,7 +241,7 @@ ${description}
           </div>
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.length === 0 && emailMessages.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-8">
+              <p className="text-gray-600 dark:text-gray-400 text-sm text-center py-8">
                 {t.report.noMessages}
               </p>
             ) : (
@@ -249,10 +249,10 @@ ${description}
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="bg-blue-50 rounded-lg p-3"
+                    className="bg-blue-50 dark:bg-gray-900 rounded-lg p-3"
                   >
                     <p className="text-xs font-semibold text-blue-600 mb-1">{t.report.me}</p>
-                    <p className="text-sm text-gray-900">
+                    <p className="text-sm text-gray-900 dark:text-white">
                       <strong>{msg.title}</strong>
                       <br />
                       {msg.description}
@@ -267,20 +267,20 @@ ${description}
                     key={email.id}
                     className={`rounded-lg p-3 ${
                       email.is_sent
-                        ? 'bg-blue-50'
-                        : 'bg-green-50 border border-green-200'
+                        ? 'bg-blue-50 dark:bg-gray-900'
+                        : 'bg-green-50 dark:bg-gray-900 border border-green-200 dark:border-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       {!email.is_sent && <Mail size={14} className="text-green-600" />}
-                      <p className="text-xs font-semibold text-gray-700">
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                         {email.is_sent ? t.report.me : email.from_email}
                       </p>
                     </div>
                     {email.subject && (
-                      <p className="text-xs text-gray-600 mb-1 font-medium">{email.subject}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 font-medium">{email.subject}</p>
                     )}
-                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{email.body}</p>
+                    <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{email.body}</p>
                     <p className="text-xs text-gray-500 mt-2">
                       {new Date(email.received_at).toLocaleString('fr-CH')}
                     </p>

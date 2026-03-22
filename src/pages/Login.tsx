@@ -83,25 +83,25 @@ export default function Login({ supabase }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-600 to-teal-500 flex">
-      <div className="w-1/3 bg-gradient-to-br from-blue-600 to-teal-500 text-white p-16 flex flex-col justify-center">
+    <div className="min-h-screen bg-gradient-to-r from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 flex">
+      <div className="w-1/3 bg-gradient-to-br from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 text-white p-16 flex flex-col justify-center">
         <h1 className="text-4xl font-bold mb-2">{t.login.appTitle}</h1>
-        <p className="text-lg text-blue-100 mb-8">{t.login.appSubtitle}</p>
-        <p className="text-sm text-blue-100 leading-relaxed">
+        <p className="text-lg text-blue-100 dark:text-gray-300 mb-8">{t.login.appSubtitle}</p>
+        <p className="text-sm text-blue-100 dark:text-gray-400 leading-relaxed">
           {t.login.appDescription}
         </p>
       </div>
 
-      <div className="flex-1 bg-gray-50 flex items-center justify-center p-12">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-          <div className="flex gap-2 mb-6 border-b border-gray-200">
+      <div className="flex-1 bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-12">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={() => { setMode('signin'); setError(''); }}
               className={`pb-2 px-4 font-medium text-sm transition ${
                 mode === 'signin'
                   ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {t.login.signinTab}
@@ -112,17 +112,17 @@ export default function Login({ supabase }) {
               className={`pb-2 px-4 font-medium text-sm transition ${
                 mode === 'signup'
                   ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {t.login.signupTab}
             </button>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {mode === 'signin' ? t.login.signinTab : t.login.createAccount}
           </h2>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             {mode === 'signin'
               ? t.login.signinSubtitle
               : t.login.signupSubtitle}
@@ -130,7 +130,7 @@ export default function Login({ supabase }) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                 {t.login.email}
               </label>
               <input
@@ -138,12 +138,12 @@ export default function Login({ supabase }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t.login.emailPlaceholder}
-                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                 {t.login.password}
               </label>
               <div className="relative">
@@ -152,12 +152,12 @@ export default function Login({ supabase }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t.login.passwordPlaceholder}
-                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-600"
+                  className="absolute right-3 top-2.5 text-gray-600 dark:text-gray-400"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -166,11 +166,11 @@ export default function Login({ supabase }) {
 
             {mode === 'signup' && (
               <>
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <p className="text-xs text-blue-800 mb-2 font-semibold">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                  <p className="text-xs text-blue-800 dark:text-blue-300 mb-2 font-semibold">
                     {t.login.gmailCodeRequired}
                   </p>
-                  <ol className="text-xs text-blue-700 space-y-1 ml-4 list-decimal">
+                  <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-decimal">
                     {t.login.gmailInstructions.map((instruction, index) => (
                       <li key={index}>
                         {index === 0 ? (
@@ -189,7 +189,7 @@ export default function Login({ supabase }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     {t.login.gmailCodeLabel}
                   </label>
                   <div className="relative">
@@ -198,17 +198,17 @@ export default function Login({ supabase }) {
                       value={gmailAppPassword}
                       onChange={(e) => setGmailAppPassword(e.target.value)}
                       placeholder={t.login.gmailCodePlaceholder}
-                      className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                     />
                     <button
                       type="button"
                       onClick={() => setShowGmailPassword(!showGmailPassword)}
-                      className="absolute right-3 top-2.5 text-gray-600"
+                      className="absolute right-3 top-2.5 text-gray-600 dark:text-gray-400"
                     >
                       {showGmailPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {t.login.gmailCodeHelp}
                   </p>
                 </div>
@@ -218,8 +218,8 @@ export default function Login({ supabase }) {
             {error && (
               <div className={`p-3 rounded-md text-sm ${
                 error.includes('✅')
-                  ? 'bg-green-50 text-green-700'
-                  : 'bg-red-50 text-red-700'
+                  ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
               }`}>
                 {error}
               </div>
