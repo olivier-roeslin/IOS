@@ -32,6 +32,7 @@ export default function DocumentsPage() {
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [pdfDocument, setPdfDocument] = useState(null);
+  const [allMatches, setAllMatches] = useState([]);
 
   const handleDocumentLoadSuccess = useCallback((pdf) => {
     setNumPages(pdf.numPages);
@@ -45,6 +46,7 @@ export default function DocumentsPage() {
     setSearchResults([]);
     setCurrentSearchIndex(0);
     setPdfDocument(null);
+    setAllMatches([]);
   };
 
   const openExternal = (doc) => {
@@ -57,30 +59,41 @@ export default function DocumentsPage() {
     setSearchResults([]);
     setCurrentSearchIndex(0);
     setPdfDocument(null);
+    setAllMatches([]);
   };
 
   const handleSearch = async () => {
     if (!searchTerm.trim() || !pdfDocument) return;
 
     setIsSearching(true);
-    const results = [];
+    const matches = [];
 
     try {
       for (let i = 1; i <= pdfDocument.numPages; i++) {
         const page = await pdfDocument.getPage(i);
         const textContent = await page.getTextContent();
-        const text = textContent.items.map(item => item.str).join(' ').toLowerCase();
 
-        if (text.includes(searchTerm.toLowerCase())) {
-          const count = (text.match(new RegExp(searchTerm.toLowerCase(), 'g')) || []).length;
-          results.push({ page: i, count });
-        }
+        textContent.items.forEach((item, itemIndex) => {
+          const textLower = item.str.toLowerCase();
+          const searchLower = searchTerm.toLowerCase();
+          let index = textLower.indexOf(searchLower);
+
+          while (index !== -1) {
+            matches.push({
+              page: i,
+              itemIndex,
+              charIndex: index,
+              text: item.str.substring(index, index + searchTerm.length)
+            });
+            index = textLower.indexOf(searchLower, index + 1);
+          }
+        });
       }
 
-      setSearchResults(results);
+      setAllMatches(matches);
       setCurrentSearchIndex(0);
-      if (results.length > 0) {
-        setPageNumber(results[0].page);
+      if (matches.length > 0) {
+        setPageNumber(matches[0].page);
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -90,32 +103,36 @@ export default function DocumentsPage() {
   };
 
   const nextSearchResult = useCallback(() => {
-    if (searchResults.length === 0) return;
-    const nextIndex = (currentSearchIndex + 1) % searchResults.length;
+    if (allMatches.length === 0) return;
+    const nextIndex = (currentSearchIndex + 1) % allMatches.length;
     setCurrentSearchIndex(nextIndex);
-    setPageNumber(searchResults[nextIndex].page);
-  }, [searchResults, currentSearchIndex]);
+    setPageNumber(allMatches[nextIndex].page);
+  }, [allMatches, currentSearchIndex]);
 
   const prevSearchResult = useCallback(() => {
-    if (searchResults.length === 0) return;
-    const prevIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+    if (allMatches.length === 0) return;
+    const prevIndex = currentSearchIndex === 0 ? allMatches.length - 1 : currentSearchIndex - 1;
     setCurrentSearchIndex(prevIndex);
-    setPageNumber(searchResults[prevIndex].page);
-  }, [searchResults, currentSearchIndex]);
+    setPageNumber(allMatches[prevIndex].page);
+  }, [allMatches, currentSearchIndex]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === 'Enter' && searchResults.length > 0 && !e.target.matches('input')) {
+      if (e.key === 'Enter' && allMatches.length > 0 && !e.target.matches('input')) {
+        e.preventDefault();
         nextSearchResult();
       }
     };
 
-    window.addEventListener('keypress', handleKeyPress);
-    return () => window.removeEventListener('keypress', handleKeyPress);
-  }, [nextSearchResult, searchResults.length]);
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [nextSearchResult, allMatches.length]);
 
   const customTextRenderer = useCallback((textItem) => {
-    if (!searchTerm) return textItem.str;
+    if (!searchTerm || allMatches.length === 0) return textItem.str;
+
+    const currentMatch = allMatches[currentSearchIndex];
+    if (!currentMatch || currentMatch.page !== pageNumber) return textItem.str;
 
     const searchLower = searchTerm.toLowerCase();
     const textLower = textItem.str.toLowerCase();
@@ -125,16 +142,33 @@ export default function DocumentsPage() {
     const parts = [];
     let lastIndex = 0;
     let index = textLower.indexOf(searchLower);
+    let matchCounter = 0;
+
+    const pageMatches = allMatches.filter(m => m.page === pageNumber);
+    const currentMatchIndexInPage = pageMatches.findIndex(m =>
+      m.itemIndex === currentMatch.itemIndex && m.charIndex === currentMatch.charIndex
+    );
 
     while (index !== -1) {
       if (index > lastIndex) {
         parts.push(textItem.str.substring(lastIndex, index));
       }
-      parts.push(
-        `<mark style="background-color: #60A5FA; color: white; padding: 2px 0;">${textItem.str.substring(index, index + searchTerm.length)}</mark>`
+
+      const isCurrentMatch = pageMatches.some((m, idx) =>
+        m.charIndex === index && idx === currentMatchIndexInPage
       );
+
+      const highlightStyle = isCurrentMatch
+        ? 'background-color: #60A5FA; color: white; padding: 2px 4px; border-radius: 2px;'
+        : 'background-color: transparent; color: inherit;';
+
+      parts.push(
+        `<mark style="${highlightStyle}">${textItem.str.substring(index, index + searchTerm.length)}</mark>`
+      );
+
       lastIndex = index + searchTerm.length;
       index = textLower.indexOf(searchLower, lastIndex);
+      matchCounter++;
     }
 
     if (lastIndex < textItem.str.length) {
@@ -142,7 +176,7 @@ export default function DocumentsPage() {
     }
 
     return parts.join('');
-  }, [searchTerm]);
+  }, [searchTerm, allMatches, currentSearchIndex, pageNumber]);
 
   if (selectedDoc) {
     return (
@@ -179,13 +213,13 @@ export default function DocumentsPage() {
               </button>
             </div>
 
-            {searchResults.length > 0 && (
+            {allMatches.length > 0 && (
               <div className="flex items-center gap-2 bg-blue-50 dark:bg-gray-900 px-4 py-2 rounded-md">
                 <button onClick={prevSearchResult} className="text-blue-600 hover:text-blue-700">
                   <ChevronLeft size={18} />
                 </button>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {currentSearchIndex + 1}/{searchResults.length}
+                  {currentSearchIndex + 1}/{allMatches.length}
                 </span>
                 <button onClick={nextSearchResult} className="text-blue-600 hover:text-blue-700">
                   <ChevronRight size={18} />
@@ -193,7 +227,7 @@ export default function DocumentsPage() {
                 <button
                   onClick={() => {
                     setSearchTerm('');
-                    setSearchResults([]);
+                    setAllMatches([]);
                     setCurrentSearchIndex(0);
                   }}
                   className="ml-2 text-gray-500 hover:text-gray-700"
@@ -234,7 +268,7 @@ export default function DocumentsPage() {
             <Page
               pageNumber={pageNumber}
               width={800}
-              customTextRenderer={searchResults.length > 0 ? customTextRenderer : undefined}
+              customTextRenderer={allMatches.length > 0 ? customTextRenderer : undefined}
             />
           </Document>
         </div>
