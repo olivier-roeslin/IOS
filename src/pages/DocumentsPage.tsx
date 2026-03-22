@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, ExternalLink, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useLanguage } from '../lib/LanguageContext';
@@ -31,17 +31,20 @@ export default function DocumentsPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [pdfDocument, setPdfDocument] = useState(null);
 
-  const handleDocumentLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
+  const handleDocumentLoadSuccess = useCallback((pdf) => {
+    setNumPages(pdf.numPages);
     setPageNumber(1);
-  };
+    setPdfDocument(pdf);
+  }, []);
 
   const openInApp = (doc) => {
     setSelectedDoc(doc);
     setSearchTerm('');
     setSearchResults([]);
     setCurrentSearchIndex(0);
+    setPdfDocument(null);
   };
 
   const openExternal = (doc) => {
@@ -53,20 +56,18 @@ export default function DocumentsPage() {
     setSearchTerm('');
     setSearchResults([]);
     setCurrentSearchIndex(0);
+    setPdfDocument(null);
   };
 
   const handleSearch = async () => {
-    if (!searchTerm.trim() || !selectedDoc) return;
+    if (!searchTerm.trim() || !pdfDocument) return;
 
     setIsSearching(true);
     const results = [];
 
     try {
-      const loadingTask = pdfjs.getDocument(selectedDoc.file);
-      const pdf = await loadingTask.promise;
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
+      for (let i = 1; i <= pdfDocument.numPages; i++) {
+        const page = await pdfDocument.getPage(i);
         const textContent = await page.getTextContent();
         const text = textContent.items.map(item => item.str).join(' ').toLowerCase();
 
@@ -88,30 +89,60 @@ export default function DocumentsPage() {
     }
   };
 
-  const nextSearchResult = () => {
+  const nextSearchResult = useCallback(() => {
     if (searchResults.length === 0) return;
     const nextIndex = (currentSearchIndex + 1) % searchResults.length;
     setCurrentSearchIndex(nextIndex);
     setPageNumber(searchResults[nextIndex].page);
-  };
+  }, [searchResults, currentSearchIndex]);
 
-  const prevSearchResult = () => {
+  const prevSearchResult = useCallback(() => {
     if (searchResults.length === 0) return;
     const prevIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
     setCurrentSearchIndex(prevIndex);
     setPageNumber(searchResults[prevIndex].page);
-  };
+  }, [searchResults, currentSearchIndex]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === 'Enter' && searchResults.length > 0) {
+      if (e.key === 'Enter' && searchResults.length > 0 && !e.target.matches('input')) {
         nextSearchResult();
       }
     };
 
     window.addEventListener('keypress', handleKeyPress);
     return () => window.removeEventListener('keypress', handleKeyPress);
-  }, [searchResults, currentSearchIndex]);
+  }, [nextSearchResult, searchResults.length]);
+
+  const customTextRenderer = useCallback((textItem) => {
+    if (!searchTerm) return textItem.str;
+
+    const searchLower = searchTerm.toLowerCase();
+    const textLower = textItem.str.toLowerCase();
+
+    if (!textLower.includes(searchLower)) return textItem.str;
+
+    const parts = [];
+    let lastIndex = 0;
+    let index = textLower.indexOf(searchLower);
+
+    while (index !== -1) {
+      if (index > lastIndex) {
+        parts.push(textItem.str.substring(lastIndex, index));
+      }
+      parts.push(
+        `<mark style="background-color: #60A5FA; color: white; padding: 2px 0;">${textItem.str.substring(index, index + searchTerm.length)}</mark>`
+      );
+      lastIndex = index + searchTerm.length;
+      index = textLower.indexOf(searchLower, lastIndex);
+    }
+
+    if (lastIndex < textItem.str.length) {
+      parts.push(textItem.str.substring(lastIndex));
+    }
+
+    return parts.join('');
+  }, [searchTerm]);
 
   if (selectedDoc) {
     return (
@@ -200,7 +231,11 @@ export default function DocumentsPage() {
             onLoadSuccess={handleDocumentLoadSuccess}
             className="max-w-full"
           >
-            <Page pageNumber={pageNumber} width={800} />
+            <Page
+              pageNumber={pageNumber}
+              width={800}
+              customTextRenderer={searchResults.length > 0 ? customTextRenderer : undefined}
+            />
           </Document>
         </div>
       </div>
