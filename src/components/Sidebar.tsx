@@ -59,7 +59,7 @@ export default function Sidebar({ currentPage, onPageChange }) {
       </nav>
 
       <div className="text-xs text-blue-100 dark:text-gray-400">
-        Made in Bôle
+        Made in Neuchâtel
       </div>
     </aside>
   );
