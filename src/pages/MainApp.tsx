@@ -6,8 +6,10 @@ import ChatbotPage from './ChatbotPage';
 import DocumentsPage from './DocumentsPage';
 import ContactsPage from './ContactsPage';
 import SettingsPage from './SettingsPage';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function MainApp({ session, supabase }) {
+  const { t } = useLanguage();
   const [currentPage, setCurrentPage] = useState('report');
 
   const handleLogout = async () => {
@@ -21,14 +23,14 @@ export default function MainApp({ session, supabase }) {
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Connecté en tant que <span className="font-semibold text-gray-900">{session.user.email}</span>
+            {t.header.connectedAs} <span className="font-semibold text-gray-900">{session.user.email}</span>
           </div>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition"
           >
             <LogOut size={18} />
-            Déconnexion
+            {t.header.logout}
           </button>
         </header>
 
