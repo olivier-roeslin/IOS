@@ -7,7 +7,7 @@ interface Message {
   content: string;
 }
 
-export default function ChatbotPage() {
+export default function ChatbotPage({ supabase, session }) {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -15,14 +15,41 @@ export default function ChatbotPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    loadMessages();
+  }, []);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const handleDeleteMessages = () => {
-    if (confirm(t.chatbot.confirmDelete)) {
+  const loadMessages = async () => {
+    const { data } = await supabase
+      .from('chatbot_messages')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: true });
+
+    if (data) {
+      setMessages(data.map(msg => ({ role: msg.role, content: msg.content })));
+    }
+  };
+
+  const handleDeleteMessages = async () => {
+    if (!confirm(t.chatbot.confirmDelete)) return;
+
+    try {
+      const { error } = await supabase
+        .from('chatbot_messages')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+
       setMessages([]);
+    } catch (err) {
+      console.error('Error deleting messages:', err);
     }
   };
 
@@ -32,10 +59,18 @@ export default function ChatbotPage() {
 
     const userMessage = input.trim();
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+
+    const newUserMessage = { role: 'user', content: userMessage };
+    setMessages((prev) => [...prev, newUserMessage]);
     setLoading(true);
 
     try {
+      await supabase.from('chatbot_messages').insert({
+        user_id: session.user.id,
+        role: 'user',
+        content: userMessage,
+      });
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot`;
 
       const headers = {
@@ -59,7 +94,15 @@ export default function ChatbotPage() {
       }
 
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.message }]);
+      const assistantMessage = { role: 'assistant', content: data.message };
+
+      await supabase.from('chatbot_messages').insert({
+        user_id: session.user.id,
+        role: 'assistant',
+        content: data.message,
+      });
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       const errorMessages = {
         fr: 'Erreur:',
@@ -67,10 +110,15 @@ export default function ChatbotPage() {
         es: 'Error:',
         it: 'Errore:'
       };
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `${errorMessages[language] || 'Erreur:'} ${err.message}` },
-      ]);
+      const errorMessage = { role: 'assistant', content: `${errorMessages[language] || 'Erreur:'} ${err.message}` };
+
+      await supabase.from('chatbot_messages').insert({
+        user_id: session.user.id,
+        role: 'assistant',
+        content: errorMessage.content,
+      });
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }

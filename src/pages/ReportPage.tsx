@@ -18,16 +18,27 @@ export default function ReportPage({ supabase, session }) {
     loadEmailMessages();
     const interval = setInterval(syncGmailMessages, 30000);
 
-    const channel = supabase
-      .channel('reports')
+    const reportsChannel = supabase
+      .channel('reports_channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, (payload) => {
         setMessages((prev) => [...prev, payload.new]);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'reports' }, () => {
+        loadMessages();
+      })
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel('messages_channel')
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, () => {
+        loadEmailMessages();
       })
       .subscribe();
 
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(reportsChannel);
+      supabase.removeChannel(messagesChannel);
     };
   }, []);
 

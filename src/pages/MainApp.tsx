@@ -36,7 +36,7 @@ export default function MainApp({ session, supabase }) {
 
         <main className="flex-1 overflow-auto p-8">
           {currentPage === 'report' && <ReportPage supabase={supabase} session={session} />}
-          {currentPage === 'chatbot' && <ChatbotPage />}
+          {currentPage === 'chatbot' && <ChatbotPage supabase={supabase} session={session} />}
           {currentPage === 'documents' && <DocumentsPage />}
           {currentPage === 'contacts' && <ContactsPage supabase={supabase} />}
           {currentPage === 'settings' && <SettingsPage />}
