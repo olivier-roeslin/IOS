@@ -57,6 +57,7 @@ export default function ReportPage({ supabase, session }) {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('received_at', { ascending: true });
 
       if (error) throw error;
