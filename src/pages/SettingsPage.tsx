@@ -77,22 +77,11 @@ export default function SettingsPage({ supabase, session }) {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Paramètres Gmail</h1>
-        <p className="text-gray-600">Configurez votre compte Gmail pour synchroniser vos messages</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion Gmail</h1>
+        <p className="text-gray-600">Connectez votre compte Gmail pour synchroniser vos messages</p>
       </div>
 
       <div className="max-w-2xl bg-white rounded-lg shadow-sm p-6">
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h3 className="font-semibold text-blue-900 mb-2">Comment obtenir un mot de passe d'application Gmail?</h3>
-          <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-            <li>Allez sur <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="underline">myaccount.google.com/security</a></li>
-            <li>Activez la validation en deux étapes si ce n'est pas déjà fait</li>
-            <li>Recherchez "Mots de passe d'application"</li>
-            <li>Créez un nouveau mot de passe d'application</li>
-            <li>Copiez le mot de passe généré (16 caractères)</li>
-          </ol>
-        </div>
-
         <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -120,9 +109,6 @@ export default function SettingsPage({ supabase, session }) {
               className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Le mot de passe d'application a 16 caractères (avec ou sans espaces)
-            </p>
           </div>
 
           {message && (
@@ -137,7 +123,7 @@ export default function SettingsPage({ supabase, session }) {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save size={18} />
-            {loading ? 'Enregistrement...' : hasConfig ? 'Mettre à jour la configuration' : 'Enregistrer la configuration'}
+            {loading ? 'Enregistrement...' : hasConfig ? 'Mettre à jour le mot de passe' : 'Se connecter'}
           </button>
         </form>
 
@@ -145,7 +131,7 @@ export default function SettingsPage({ supabase, session }) {
           <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
             <div className="flex items-center gap-2 text-green-800">
               <Mail size={18} />
-              <span className="font-semibold">Configuration active pour: {gmailUser}</span>
+              <span className="font-semibold">Connecté avec: {gmailUser}</span>
             </div>
           </div>
         )}
