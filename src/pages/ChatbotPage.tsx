@@ -43,6 +43,7 @@ export default function ChatbotPage() {
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
           language,
+          apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
         }),
       });
 

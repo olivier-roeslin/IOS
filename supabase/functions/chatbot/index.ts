@@ -14,6 +14,7 @@ interface Message {
 interface RequestBody {
   messages: Message[];
   language: string;
+  apiKey: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -25,12 +26,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { messages, language }: RequestBody = await req.json();
+    const { messages, language, apiKey }: RequestBody = await req.json();
 
-    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY not configured');
+    if (!apiKey) {
+      throw new Error('API key not provided');
     }
 
     const systemPrompts = {
@@ -64,7 +63,7 @@ incoraggialo a usare la scheda 'Rapporto'.`
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
