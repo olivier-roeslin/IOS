@@ -12,13 +12,13 @@ const DOCUMENTS = [
     id: 1,
     title: 'Ordonnance sur la formation professionnelle (OFPr)',
     type: 'Ordonnance fédérale',
-    file: '/pdfs/document1.pdf',
+    file: '/src/resources/1.pdf',
   },
   {
     id: 2,
     title: 'Loi fédérale complétant le Code civil suisse (Livre cinquième: Droit des obligations)',
     type: 'Loi fédérale',
-    file: '/pdfs/document2.pdf',
+    file: '/src/resources/2.pdf',
   },
 ];
 
