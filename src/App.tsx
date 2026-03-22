@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Login from './pages/Login';
 import MainApp from './pages/MainApp';
+import { LanguageProvider } from './lib/LanguageContext';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -38,10 +39,14 @@ function App() {
     );
   }
 
-  return session ? (
-    <MainApp session={session} supabase={supabase} />
-  ) : (
-    <Login supabase={supabase} />
+  return (
+    <LanguageProvider>
+      {session ? (
+        <MainApp session={session} supabase={supabase} />
+      ) : (
+        <Login supabase={supabase} />
+      )}
+    </LanguageProvider>
   );
 }
 

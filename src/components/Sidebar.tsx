@@ -1,6 +1,9 @@
 import { AlertCircle, MessageCircle, FileText, Users, Settings } from 'lucide-react';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function Sidebar({ currentPage, onPageChange }) {
+  const { t } = useLanguage();
+
   const menuItems = [
     {
       id: 'report',
@@ -9,22 +12,22 @@ export default function Sidebar({ currentPage, onPageChange }) {
     },
     {
       id: 'chatbot',
-      label: 'Chatbot',
+      label: t.sidebar.chatbot,
       icon: MessageCircle,
     },
     {
       id: 'documents',
-      label: 'Documents',
+      label: t.sidebar.documents,
       icon: FileText,
     },
     {
       id: 'contacts',
-      label: 'Contacts',
+      label: t.sidebar.contacts,
       icon: Users,
     },
     {
       id: 'settings',
-      label: 'Paramètres',
+      label: t.sidebar.settings,
       icon: Settings,
     },
   ];
