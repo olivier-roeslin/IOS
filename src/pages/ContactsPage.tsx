@@ -105,6 +105,26 @@ export default function ContactsPage({ supabase }) {
       }
     };
     getUser();
+
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+
+    if (accessToken && userId) {
+      (async () => {
+        await supabase
+          .from('gmail_config')
+          .upsert({
+            user_id: userId,
+            oauth_access_token: accessToken,
+            oauth_token_expiry: new Date(Date.now() + 3600 * 1000),
+            updated_at: new Date()
+          });
+
+        window.location.hash = '';
+        setEmailStatus('Gmail connecté avec succès!');
+        setTimeout(() => setEmailStatus(''), 3000);
+      })();
+    }
   }, []);
 
   useEffect(() => {
@@ -158,9 +178,26 @@ export default function ContactsPage({ supabase }) {
     if (!userId) return;
 
     setFetchingEmails(true);
-    setEmailStatus('');
+    setEmailStatus('Connexion à Gmail...');
 
     try {
+      const { data: gmailConfig } = await supabase
+        .from('gmail_config')
+        .select('oauth_access_token')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!gmailConfig?.oauth_access_token) {
+        const clientId = '440080497152-88nhm41p9ecffp3mjjhbkl0kf37jkkqd.apps.googleusercontent.com';
+        const redirectUri = `${window.location.origin}`;
+        const scope = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send';
+
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+
+        window.location.href = authUrl;
+        return;
+      }
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`;
 
       const response = await fetch(apiUrl, {
@@ -169,7 +206,10 @@ export default function ContactsPage({ supabase }) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({
+          user_id: userId,
+          access_token: gmailConfig.oauth_access_token
+        }),
       });
 
       const result = await response.json();

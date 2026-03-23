@@ -7,103 +7,107 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function fetchAllGmailMessages(email: string, appPassword: string) {
-  const conn = await Deno.connectTls({
-    hostname: "imap.gmail.com",
-    port: 993,
-  });
+interface GmailMessage {
+  id: string;
+  threadId: string;
+  labelIds: string[];
+  snippet: string;
+  payload: {
+    headers: Array<{ name: string; value: string }>;
+    parts?: Array<{ mimeType: string; body: { data?: string } }>;
+    body?: { data?: string };
+  };
+  internalDate: string;
+}
 
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  async function readResponse(timeout = 5000): Promise<string> {
-    const start = Date.now();
-    const chunk = new Uint8Array(16384);
-    let response = "";
-
-    while (Date.now() - start < timeout) {
-      try {
-        const n = await Promise.race([
-          conn.read(chunk),
-          new Promise<null>(r => setTimeout(() => r(null), 100))
-        ]);
-
-        if (n && n > 0) {
-          response += decoder.decode(chunk.subarray(0, n));
-        }
-
-        if (response.includes("\r\n") &&
-            (response.match(/^[A-Z0-9]+ (OK|BAD|NO)/m) || response.match(/\* \d+ FETCH/))) {
-          return response;
-        }
-      } catch (_e) {
-        break;
-      }
-    }
-
-    return response;
-  }
-
-  async function sendCommand(command: string): Promise<string> {
-    await conn.write(encoder.encode(command + "\r\n"));
-    return await readResponse();
-  }
-
+function decodeBase64(str: string): string {
   try {
-    await readResponse(1000);
+    const padding = '='.repeat((4 - str.length % 4) % 4);
+    const base64 = (str + padding).replace(/-/g, '+').replace(/_/g, '/');
+    return atob(base64);
+  } catch {
+    return str;
+  }
+}
 
-    await sendCommand(`A001 LOGIN ${email} ${appPassword}`);
-    await sendCommand('A002 SELECT INBOX');
+function getHeader(headers: Array<{ name: string; value: string }>, name: string): string {
+  const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
+  return header?.value || '';
+}
 
-    const searchResp = await sendCommand('A003 SEARCH ALL');
+function getBody(payload: GmailMessage['payload']): string {
+  if (payload.body?.data) {
+    return decodeBase64(payload.body.data);
+  }
 
-    const uidMatch = searchResp.match(/\* SEARCH ([\d\s]+)/);
-    if (!uidMatch) {
-      console.log("No messages found");
-      await sendCommand('A999 LOGOUT');
-      conn.close();
-      return [];
-    }
-
-    const messageIds = uidMatch[1].trim().split(/\s+/).filter(Boolean);
-    console.log(`Found ${messageIds.length} messages`);
-
-    const messages = [];
-    const recentIds = messageIds.slice(-50).reverse();
-
-    for (const msgId of recentIds) {
-      const fetchResp = await sendCommand(`A${msgId} FETCH ${msgId} (BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)] BODY[TEXT])`);
-
-      const fromMatch = fetchResp.match(/From:\s*(.+?)[\r\n]/i);
-      const toMatch = fetchResp.match(/To:\s*(.+?)[\r\n]/i);
-      const subjectMatch = fetchResp.match(/Subject:\s*(.+?)[\r\n]/i);
-      const dateMatch = fetchResp.match(/Date:\s*(.+?)[\r\n]/i);
-
-      const bodyMatch = fetchResp.match(/BODY\[TEXT\]\s*\{(\d+)\}\s*\r?\n([\s\S]*?)(?:\r?\n\)|\r?\nA\d+)/);
-
-      if (fromMatch && toMatch) {
-        const from = fromMatch[1].trim();
-        const to = toMatch[1].trim();
-        const subject = subjectMatch?.[1]?.trim() || '(no subject)';
-        const date = dateMatch?.[1]?.trim() || new Date().toISOString();
-        const body = bodyMatch?.[2]?.trim().substring(0, 1000) || '';
-
-        messages.push({ id: msgId, from, to, subject, date, body });
+  if (payload.parts) {
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        return decodeBase64(part.body.data);
       }
     }
-
-    await sendCommand('A999 LOGOUT');
-    conn.close();
-
-    console.log(`Retrieved ${messages.length} messages`);
-    return messages;
-
-  } catch (error) {
-    console.error("IMAP error:", error);
-    try { conn.close(); } catch (_e) {}
-    return [];
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/html' && part.body?.data) {
+        return decodeBase64(part.body.data);
+      }
+    }
   }
+
+  return '';
+}
+
+async function fetchGmailMessages(accessToken: string, maxResults = 50) {
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gmail API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const messageIds = data.messages || [];
+
+  const messages = [];
+
+  for (const { id } of messageIds) {
+    const msgResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (msgResponse.ok) {
+      const msg: GmailMessage = await msgResponse.json();
+
+      const from = getHeader(msg.payload.headers, 'From');
+      const to = getHeader(msg.payload.headers, 'To');
+      const subject = getHeader(msg.payload.headers, 'Subject');
+      const date = getHeader(msg.payload.headers, 'Date');
+      const body = getBody(msg.payload);
+
+      messages.push({
+        id: msg.id,
+        threadId: msg.threadId,
+        from,
+        to,
+        subject: subject || '(no subject)',
+        date: date || new Date(parseInt(msg.internalDate)).toISOString(),
+        body: body.substring(0, 1000),
+        labelIds: msg.labelIds,
+      });
+    }
+  }
+
+  return messages;
 }
 
 Deno.serve(async (req: Request) => {
@@ -112,9 +116,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { user_id } = await req.json();
-    if (!user_id) {
-      throw new Error("User ID is required");
+    const { user_id, access_token } = await req.json();
+    if (!user_id || !access_token) {
+      throw new Error("User ID and access token are required");
     }
 
     const supabase = createClient(
@@ -122,22 +126,15 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { data: gmailConfig, error: configError } = await supabase
+    const { data: gmailConfig } = await supabase
       .from("gmail_config")
-      .select("gmail_user, gmail_app_password")
+      .select("gmail_user")
       .eq("user_id", user_id)
       .maybeSingle();
 
-    if (configError || !gmailConfig) {
-      throw new Error("Gmail configuration not found");
-    }
+    console.log(`Fetching emails via Gmail API`);
 
-    console.log(`Fetching emails for ${gmailConfig.gmail_user}`);
-
-    const messages = await fetchAllGmailMessages(
-      gmailConfig.gmail_user,
-      gmailConfig.gmail_app_password
-    );
+    const messages = await fetchGmailMessages(access_token, 50);
 
     let insertedCount = 0;
     let updatedCount = 0;
@@ -146,8 +143,8 @@ Deno.serve(async (req: Request) => {
       const fromEmail = msg.from.match(/<([^>]+)>/)?.[1]?.trim() || msg.from.trim();
       const toEmail = msg.to.match(/<([^>]+)>/)?.[1]?.trim() || msg.to.trim();
 
-      const userEmail = gmailConfig.gmail_user.toLowerCase();
-      const isSent = fromEmail.toLowerCase().includes(userEmail);
+      const userEmail = gmailConfig?.gmail_user?.toLowerCase() || '';
+      const isSent = msg.labelIds?.includes('SENT') || fromEmail.toLowerCase().includes(userEmail);
 
       const otherEmail = isSent ? toEmail : fromEmail;
       const subjectClean = msg.subject.replace(/^(Re:|RE:|Fwd:|FW:)\s*/gi, '').trim();
@@ -156,7 +153,7 @@ Deno.serve(async (req: Request) => {
       const { data: existing } = await supabase
         .from("messages")
         .select("id")
-        .eq("gmail_message_id", `imap-${msg.id}`)
+        .eq("gmail_message_id", msg.id)
         .maybeSingle();
 
       if (existing) {
@@ -166,7 +163,7 @@ Deno.serve(async (req: Request) => {
           .from("messages")
           .insert({
             user_id: user_id,
-            gmail_message_id: `imap-${msg.id}`,
+            gmail_message_id: msg.id,
             thread_id: threadId,
             from_email: fromEmail,
             to_email: toEmail,
