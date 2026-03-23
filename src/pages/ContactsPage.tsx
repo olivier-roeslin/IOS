@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Phone, Mail, ChevronRight, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Phone, Mail, ChevronRight, Send, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 
 const EMAIL_DESTINATAIRE = 'sine.nomine.1011000@gmail.com';
@@ -77,9 +77,11 @@ export default function ContactsPage({ supabase }) {
   const CONTACTS = getContacts(t);
   const [selectedContact, setSelectedContact] = useState<typeof CONTACTS[0] | null>(null);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Record<number, Array<{ text: string; date: Date }>>>({});
+  const [messages, setMessages] = useState<Record<number, Array<{ text: string; date: Date; isSent: boolean; from: string; to: string }>>>({});
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
+  const [fetchingEmails, setFetchingEmails] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const categories = [
     { key: 'all', label: t.contacts.all },
@@ -94,6 +96,93 @@ export default function ContactsPage({ supabase }) {
       ? CONTACTS
       : CONTACTS.filter((c) => c.category === selectedCategory);
 
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        loadMessages(user.id);
+      }
+    };
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    if (selectedContact && userId) {
+      loadMessages(userId);
+    }
+  }, [selectedContact, userId]);
+
+  const loadMessages = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('user_id', uid)
+        .order('received_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        const messagesByContact: Record<number, Array<{ text: string; date: Date; isSent: boolean; from: string; to: string }>> = {};
+
+        CONTACTS.forEach(contact => {
+          const contactMessages = data.filter(msg =>
+            msg.to_email === contact.email || msg.from_email === contact.email
+          ).map(msg => ({
+            text: msg.body,
+            date: new Date(msg.received_at),
+            isSent: msg.is_sent,
+            from: msg.from_email,
+            to: msg.to_email
+          }));
+
+          if (contactMessages.length > 0) {
+            messagesByContact[contact.id] = contactMessages;
+          }
+        });
+
+        setMessages(messagesByContact);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
+  const fetchNewEmails = async () => {
+    if (!userId) return;
+
+    setFetchingEmails(true);
+    setEmailStatus('');
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setEmailStatus(`${result.messageCount} nouveaux messages synchronisés`);
+        await loadMessages(userId);
+      } else {
+        setEmailStatus(`Erreur de synchronisation: ${result.error}`);
+      }
+    } catch (error) {
+      setEmailStatus(`Erreur: ${error.message}`);
+    } finally {
+      setFetchingEmails(false);
+      setTimeout(() => setEmailStatus(''), 5000);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedContact) return;
 
@@ -101,13 +190,6 @@ export default function ContactsPage({ supabase }) {
     setEmailStatus('');
 
     const messageText = message.trim();
-    const newMessage = { text: messageText, date: new Date() };
-
-    setMessages((prev) => ({
-      ...prev,
-      [selectedContact.id]: [...(prev[selectedContact.id] || []), newMessage],
-    }));
-
     setMessage('');
 
     try {
@@ -131,6 +213,9 @@ export default function ContactsPage({ supabase }) {
 
       if (response.ok && result.success) {
         setEmailStatus(t.contacts.successSent);
+        if (userId) {
+          await loadMessages(userId);
+        }
       } else {
         const errorMsg = result.details?.message || result.error || 'Erreur inconnue';
         setEmailStatus(`${t.contacts.errorPrefix} ${errorMsg}`);
@@ -229,15 +314,27 @@ export default function ContactsPage({ supabase }) {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.contacts.history}</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t.contacts.history}</h3>
+            <button
+              onClick={fetchNewEmails}
+              disabled={fetchingEmails}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 text-sm"
+            >
+              <RefreshCw size={16} className={fetchingEmails ? 'animate-spin' : ''} />
+              Synchroniser
+            </button>
+          </div>
 
           <div className="mb-6 space-y-3 max-h-96 overflow-y-auto">
             {messages[selectedContact.id]?.length > 0 ? (
               messages[selectedContact.id].map((msg, idx) => (
-                <div key={idx} className="bg-blue-600 text-white rounded-lg p-4">
-                  <p className="text-xs font-semibold mb-2">{t.contacts.noMessages.split(' ')[0]}</p>
-                  <p className="text-sm">{msg.text}</p>
-                  <p className="text-xs text-blue-100 mt-2">
+                <div key={idx} className={`rounded-lg p-4 ${msg.isSent ? 'bg-blue-600 text-white ml-8' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'}`}>
+                  <p className="text-xs font-semibold mb-2">
+                    {msg.isSent ? 'Vous' : (selectedContact.nameKey ? t.contacts[selectedContact.nameKey] : selectedContact.name)}
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  <p className={`text-xs mt-2 ${msg.isSent ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
                     {msg.date.toLocaleString('fr-CH')}
                   </p>
                 </div>
