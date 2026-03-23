@@ -73,6 +73,18 @@ export default function ReportPage({ supabase, session }) {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession) return;
 
+      const { data: gmailConfig } = await supabase
+        .from('gmail_config')
+        .select('oauth_access_token')
+        .eq('user_id', currentSession.user.id)
+        .maybeSingle();
+
+      if (!gmailConfig?.oauth_access_token) {
+        console.log('No Gmail OAuth token found, skipping sync');
+        setSyncing(false);
+        return;
+      }
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-gmail-messages`;
 
       const response = await fetch(apiUrl, {
@@ -81,7 +93,10 @@ export default function ReportPage({ supabase, session }) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user_id: currentSession.user.id }),
+        body: JSON.stringify({
+          user_id: currentSession.user.id,
+          access_token: gmailConfig.oauth_access_token
+        }),
       });
 
       if (response.ok) {
