@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
     const auth = btoa(`${gmailConfig.gmail_user}:${gmailConfig.gmail_app_password}`);
     const gmailApiUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 
-    const listResponse = await fetch(`${gmailApiUrl}?maxResults=50&q=in:inbox`, {
+    const listResponse = await fetch(`${gmailApiUrl}?maxResults=100&q=in:anywhere`, {
       headers: {
         Authorization: `Basic ${auth}`,
       },
@@ -85,6 +85,9 @@ Deno.serve(async (req: Request) => {
         const subject = headers.find(h => h.name.toLowerCase() === "subject")?.value || "";
         const date = headers.find(h => h.name.toLowerCase() === "date")?.value || "";
 
+        const isSentByUser = from.includes(gmailConfig.gmail_user);
+        const isReceivedByUser = to.includes(gmailConfig.gmail_user);
+
         let body = "";
         if (detail.payload.parts) {
           const textPart = detail.payload.parts.find(
@@ -97,6 +100,10 @@ Deno.serve(async (req: Request) => {
           body = atob(detail.payload.body.data.replace(/-/g, "+").replace(/_/g, "/"));
         }
 
+        if (!isSentByUser && !isReceivedByUser) {
+          continue;
+        }
+
         const { error: insertError } = await supabase
           .from("messages")
           .upsert({
@@ -107,7 +114,7 @@ Deno.serve(async (req: Request) => {
             to_email: to,
             subject: subject,
             body: body,
-            is_sent: false,
+            is_sent: isSentByUser,
             received_at: new Date(parseInt(detail.internalDate)),
           }, {
             onConflict: "gmail_message_id",

@@ -76,10 +76,13 @@ async function sendEmailViaSMTP(
     await sendTls(`RCPT TO:<${to}>`);
     await sendTls("DATA");
 
+    const messageId = `<${Date.now()}.${Math.random().toString(36).substring(7)}@${from.split('@')[1]}>`;
+
     const emailContent = [
       `From: ${from}`,
       `To: ${to}`,
       `Subject: ${subject}`,
+      `Message-ID: ${messageId}`,
       replyTo ? `Reply-To: ${replyTo}` : "",
       "Content-Type: text/plain; charset=utf-8",
       "",
