@@ -82,6 +82,7 @@ export default function ContactsPage({ supabase }) {
   const [emailStatus, setEmailStatus] = useState('');
   const [fetchingEmails, setFetchingEmails] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userGmailEmail, setUserGmailEmail] = useState<string | null>(null);
 
   const categories = [
     { key: 'all', label: t.contacts.all },
@@ -101,7 +102,18 @@ export default function ContactsPage({ supabase }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
-        loadMessages(user.id);
+
+        const { data: gmailConfig } = await supabase
+          .from('gmail_config')
+          .select('gmail_user')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (gmailConfig?.gmail_user) {
+          setUserGmailEmail(gmailConfig.gmail_user);
+        }
+
+        loadMessages(user.id, gmailConfig?.gmail_user || null);
       }
     };
     getUser();
@@ -129,11 +141,11 @@ export default function ContactsPage({ supabase }) {
 
   useEffect(() => {
     if (selectedContact && userId) {
-      loadMessages(userId);
+      loadMessages(userId, userGmailEmail);
     }
   }, [selectedContact, userId]);
 
-  const loadMessages = async (uid: string) => {
+  const loadMessages = async (uid: string, gmailEmail: string | null) => {
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -145,6 +157,7 @@ export default function ContactsPage({ supabase }) {
 
       if (data) {
         const messagesByContact: Record<number, Array<{ text: string; date: Date; isSent: boolean; from: string; to: string }>> = {};
+        const userEmail = gmailEmail?.toLowerCase() || '';
 
         CONTACTS.forEach(contact => {
           const contactEmail = contact.email.toLowerCase();
@@ -153,9 +166,10 @@ export default function ContactsPage({ supabase }) {
             const fromEmail = msg.from_email?.toLowerCase() || '';
             const toEmail = msg.to_email?.toLowerCase() || '';
 
-            const involvesContact = fromEmail.includes(contactEmail) || toEmail.includes(contactEmail);
+            const sentByUser = fromEmail === userEmail && toEmail === contactEmail;
+            const receivedFromContact = fromEmail === contactEmail && toEmail === userEmail;
 
-            return involvesContact;
+            return sentByUser || receivedFromContact;
           }).map(msg => ({
             text: msg.body || '',
             date: new Date(msg.received_at),
@@ -219,7 +233,7 @@ export default function ContactsPage({ supabase }) {
 
       if (response.ok && result.success) {
         setEmailStatus(`${result.messageCount} nouveaux messages synchronisés`);
-        await loadMessages(userId);
+        await loadMessages(userId, userGmailEmail);
       } else {
         setEmailStatus(`Erreur de synchronisation: ${result.error}`);
       }
@@ -262,7 +276,7 @@ export default function ContactsPage({ supabase }) {
       if (response.ok && result.success) {
         setEmailStatus(t.contacts.successSent);
         if (userId) {
-          await loadMessages(userId);
+          await loadMessages(userId, userGmailEmail);
         }
       } else {
         const errorMsg = result.details?.message || result.error || 'Erreur inconnue';
