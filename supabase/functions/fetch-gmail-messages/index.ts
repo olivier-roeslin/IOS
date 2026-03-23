@@ -7,123 +7,110 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function fetchEmailsViaIMAPProxy(email: string, password: string) {
-  try {
-    const imapHost = "imap.gmail.com";
-    const imapPort = 993;
+async function fetchGmailViaAPI(email: string, appPassword: string) {
+  const auth = btoa(`${email}:${appPassword}`);
 
+  const imapResponse = await fetch('https://imap.gmail.com/gmail/v1/users/me/messages?maxResults=50', {
+    headers: {
+      'Authorization': `Basic ${auth}`,
+    }
+  });
+
+  if (!imapResponse.ok) {
     const conn = await Deno.connectTls({
-      hostname: imapHost,
-      port: imapPort,
+      hostname: "imap.gmail.com",
+      port: 993,
     });
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    let commandCounter = 1;
+    let buffer = "";
 
-    async function readResponse(timeoutMs = 5000): Promise<string> {
-      const buffer = new Uint8Array(65536);
-      let response = "";
-      const startTime = Date.now();
+    async function readUntilComplete(timeout = 3000): Promise<string> {
+      const start = Date.now();
+      const chunk = new Uint8Array(8192);
 
-      while (Date.now() - startTime < timeoutMs) {
+      while (Date.now() - start < timeout) {
         try {
-          const bytesRead = await Promise.race([
-            conn.read(buffer),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 100))
+          const n = await Promise.race([
+            conn.read(chunk),
+            new Promise<null>(r => setTimeout(() => r(null), 50))
           ]);
 
-          if (bytesRead && bytesRead > 0) {
-            response += decoder.decode(buffer.subarray(0, bytesRead));
+          if (n) {
+            buffer += decoder.decode(chunk.subarray(0, n));
           }
 
-          if (response.includes(`A${commandCounter - 1} OK`) ||
-              response.includes(`A${commandCounter - 1} NO`) ||
-              response.includes(`A${commandCounter - 1} BAD`)) {
-            break;
+          if (buffer.includes("\r\n") || buffer.includes("OK") || buffer.includes("BAD") || buffer.includes("NO")) {
+            const result = buffer;
+            buffer = "";
+            return result;
           }
         } catch (e) {
           break;
         }
       }
 
-      return response;
+      const result = buffer;
+      buffer = "";
+      return result;
     }
 
-    async function sendCommand(command: string): Promise<string> {
-      const tag = `A${commandCounter++}`;
-      await conn.write(encoder.encode(`${tag} ${command}\r\n`));
-      return await readResponse();
+    async function cmd(command: string): Promise<string> {
+      await conn.write(encoder.encode(command + "\r\n"));
+      return await readUntilComplete();
     }
 
-    await readResponse(2000);
+    await readUntilComplete(1000);
 
-    const loginResp = await sendCommand(`LOGIN "${email}" "${password}"`);
-    if (!loginResp.includes("OK")) {
-      throw new Error("IMAP login failed");
-    }
+    await cmd(`A1 LOGIN ${email} ${appPassword}`);
+    await cmd('A2 SELECT INBOX');
 
-    await sendCommand('SELECT INBOX');
-    const searchResp = await sendCommand('SEARCH ALL');
+    const searchResult = await cmd('A3 UID SEARCH ALL');
+    const uidMatch = searchResult.match(/\* SEARCH (.+)/);
 
-    const searchMatch = searchResp.match(/\* SEARCH (.+)/);
-    if (!searchMatch) {
+    if (!uidMatch) {
+      conn.close();
       return [];
     }
 
-    const messageIds = searchMatch[1].trim().split(' ').filter(Boolean);
+    const uids = uidMatch[1].trim().split(' ').filter(Boolean);
     const messages = [];
-    const recentIds = messageIds.slice(-30).reverse();
 
-    for (const msgId of recentIds.slice(0, 20)) {
-      try {
-        const fetchResp = await sendCommand(`FETCH ${msgId} (BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)] BODY[TEXT])`);
+    const recentUids = uids.slice(-30).reverse().slice(0, 20);
 
-        const fromMatch = fetchResp.match(/From: ([^\r\n]+)/i);
-        const toMatch = fetchResp.match(/To: ([^\r\n]+)/i);
-        const subjectMatch = fetchResp.match(/Subject: ([^\r\n]+)/i);
-        const dateMatch = fetchResp.match(/Date: ([^\r\n]+)/i);
+    for (const uid of recentUids) {
+      const headerCmd = `A${100 + parseInt(uid)} UID FETCH ${uid} BODY[HEADER]`;
+      const bodyCmd = `A${200 + parseInt(uid)} UID FETCH ${uid} BODY[TEXT]`;
 
-        const bodyMatch = fetchResp.match(/BODY\[TEXT\]\s*(?:\{(\d+)\}\s*)?\r?\n([\s\S]*?)(?:\r?\n\)|\r?\nA\d+)/);
+      const headerResp = await cmd(headerCmd);
+      const bodyResp = await cmd(bodyCmd);
 
-        let body = "";
-        if (bodyMatch) {
-          body = bodyMatch[2].trim().substring(0, 500);
-        }
+      const from = headerResp.match(/^From:\s*(.+)$/im)?.[1]?.trim() || '';
+      const to = headerResp.match(/^To:\s*(.+)$/im)?.[1]?.trim() || '';
+      const subject = headerResp.match(/^Subject:\s*(.+)$/im)?.[1]?.trim() || '';
+      const date = headerResp.match(/^Date:\s*(.+)$/im)?.[1]?.trim() || '';
 
-        const from = fromMatch ? fromMatch[1].trim() : '';
-        const to = toMatch ? toMatch[1].trim() : '';
-        const subject = subjectMatch ? subjectMatch[1].trim() : '';
-        const date = dateMatch ? dateMatch[1].trim() : '';
+      const bodyMatch = bodyResp.match(/BODY\[TEXT\]\s*\{?\d*\}?\s*\r?\n([\s\S]+?)(?:\r?\n\)|$)/);
+      const body = bodyMatch ? bodyMatch[1].trim().substring(0, 500) : '';
 
-        if (from && to) {
-          messages.push({
-            id: msgId,
-            from,
-            to,
-            subject,
-            date,
-            body,
-          });
-        }
-      } catch (err) {
-        console.error(`Error fetching message ${msgId}:`, err);
+      if (from && to) {
+        messages.push({ id: uid, from, to, subject, date, body });
       }
     }
 
-    await sendCommand('LOGOUT');
+    await cmd('A999 LOGOUT');
 
     try {
       conn.close();
     } catch (e) {
-      // Ignore close errors
+      // ignore
     }
 
     return messages;
-  } catch (error) {
-    console.error('IMAP error:', error);
-    throw error;
   }
+
+  return [];
 }
 
 Deno.serve(async (req: Request) => {
@@ -152,38 +139,33 @@ Deno.serve(async (req: Request) => {
       throw new Error("Gmail configuration not found");
     }
 
-    const messages = await fetchEmailsViaIMAPProxy(
+    const messages = await fetchGmailViaAPI(
       gmailConfig.gmail_user,
       gmailConfig.gmail_app_password
     );
 
-    const detailedMessages = [];
+    let insertedCount = 0;
 
     for (const msg of messages) {
       const fromEmail = msg.from.match(/<([^>]+)>/)?.[1] || msg.from;
       const toEmail = msg.to.match(/<([^>]+)>/)?.[1] || msg.to;
 
-      const isSentByUser = fromEmail.toLowerCase().includes(gmailConfig.gmail_user.toLowerCase());
-      const isReceivedByUser = toEmail.toLowerCase().includes(gmailConfig.gmail_user.toLowerCase());
+      const isSent = fromEmail.toLowerCase().includes(gmailConfig.gmail_user.toLowerCase());
 
-      if (!isSentByUser && !isReceivedByUser) {
-        continue;
-      }
-
-      const subjectClean = msg.subject.replace(/^(Re:|Fwd:)\s*/i, '').trim();
+      const subjectClean = msg.subject.replace(/^(Re:|RE:|Fwd:|FW:)\s*/gi, '').trim();
       const threadId = `thread-${subjectClean}`;
 
       const { error: insertError } = await supabase
         .from("messages")
         .upsert({
           user_id: user_id,
-          gmail_message_id: `imap-${msg.id}-${threadId}`,
+          gmail_message_id: `imap-uid-${msg.id}`,
           thread_id: threadId,
           from_email: fromEmail,
           to_email: toEmail,
           subject: msg.subject,
           body: msg.body,
-          is_sent: isSentByUser,
+          is_sent: isSent,
           received_at: new Date(msg.date || Date.now()),
         }, {
           onConflict: "gmail_message_id",
@@ -191,21 +173,15 @@ Deno.serve(async (req: Request) => {
         });
 
       if (!insertError) {
-        detailedMessages.push({
-          from: fromEmail,
-          to: toEmail,
-          subject: msg.subject,
-          body: msg.body.substring(0, 200),
-          date: msg.date,
-        });
+        insertedCount++;
       }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        messageCount: detailedMessages.length,
-        messages: detailedMessages,
+        messageCount: insertedCount,
+        totalFetched: messages.length,
       }),
       {
         headers: {
@@ -215,7 +191,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error("Error fetching Gmail messages:", error);
+    console.error("Error:", error);
     return new Response(
       JSON.stringify({
         success: false,
