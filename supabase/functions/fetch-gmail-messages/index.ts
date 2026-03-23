@@ -147,13 +147,17 @@ Deno.serve(async (req: Request) => {
     let insertedCount = 0;
 
     for (const msg of messages) {
-      const fromEmail = msg.from.match(/<([^>]+)>/)?.[1] || msg.from;
-      const toEmail = msg.to.match(/<([^>]+)>/)?.[1] || msg.to;
+      const fromEmail = msg.from.match(/<([^>]+)>/)?.[1] || msg.from.trim();
+      const toEmail = msg.to.match(/<([^>]+)>/)?.[1] || msg.to.trim();
 
-      const isSent = fromEmail.toLowerCase().includes(gmailConfig.gmail_user.toLowerCase());
+      const userEmail = gmailConfig.gmail_user.toLowerCase();
+      const isSent = fromEmail.toLowerCase().includes(userEmail);
+
+      const otherEmail = isSent ? toEmail : fromEmail;
 
       const subjectClean = msg.subject.replace(/^(Re:|RE:|Fwd:|FW:)\s*/gi, '').trim();
-      const threadId = `thread-${subjectClean}`;
+
+      const threadId = `${otherEmail}-${subjectClean}`.toLowerCase();
 
       const { error: insertError } = await supabase
         .from("messages")

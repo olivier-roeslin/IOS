@@ -128,17 +128,18 @@ export default function ContactsPage({ supabase }) {
 
         CONTACTS.forEach(contact => {
           const contactMessages = data.filter(msg => {
-            const fromMatch = msg.from_email?.toLowerCase().includes(contact.email.toLowerCase()) ||
-                              contact.email.toLowerCase().includes(msg.from_email?.toLowerCase());
-            const toMatch = msg.to_email?.toLowerCase().includes(contact.email.toLowerCase()) ||
-                            contact.email.toLowerCase().includes(msg.to_email?.toLowerCase());
-            return fromMatch || toMatch;
+            const fromEmail = msg.from_email?.toLowerCase() || '';
+            const toEmail = msg.to_email?.toLowerCase() || '';
+            const contactEmail = contact.email.toLowerCase();
+
+            return fromEmail.includes(contactEmail) || toEmail.includes(contactEmail);
           }).map(msg => ({
             text: msg.body || '',
             date: new Date(msg.received_at),
             isSent: msg.is_sent,
             from: msg.from_email,
-            to: msg.to_email
+            to: msg.to_email,
+            subject: msg.subject
           }));
 
           if (contactMessages.length > 0) {
