@@ -148,7 +148,11 @@ export default function ReportPage({ supabase, session }) {
 
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !currentSession) {
+          throw new Error('Session expired. Please log in again.');
+        }
 
         const emailMessage = `
 Nouveau signalement reçu
@@ -164,7 +168,7 @@ ${description}
         const emailResponse = await fetch(apiUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${currentSession?.access_token}`,
+            'Authorization': `Bearer ${currentSession.access_token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
