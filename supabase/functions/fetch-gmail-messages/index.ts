@@ -7,110 +7,103 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function fetchGmailViaAPI(email: string, appPassword: string) {
-  const auth = btoa(`${email}:${appPassword}`);
-
-  const imapResponse = await fetch('https://imap.gmail.com/gmail/v1/users/me/messages?maxResults=50', {
-    headers: {
-      'Authorization': `Basic ${auth}`,
-    }
+async function fetchAllGmailMessages(email: string, appPassword: string) {
+  const conn = await Deno.connectTls({
+    hostname: "imap.gmail.com",
+    port: 993,
   });
 
-  if (!imapResponse.ok) {
-    const conn = await Deno.connectTls({
-      hostname: "imap.gmail.com",
-      port: 993,
-    });
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    let buffer = "";
+  async function readResponse(timeout = 5000): Promise<string> {
+    const start = Date.now();
+    const chunk = new Uint8Array(16384);
+    let response = "";
 
-    async function readUntilComplete(timeout = 3000): Promise<string> {
-      const start = Date.now();
-      const chunk = new Uint8Array(8192);
+    while (Date.now() - start < timeout) {
+      try {
+        const n = await Promise.race([
+          conn.read(chunk),
+          new Promise<null>(r => setTimeout(() => r(null), 100))
+        ]);
 
-      while (Date.now() - start < timeout) {
-        try {
-          const n = await Promise.race([
-            conn.read(chunk),
-            new Promise<null>(r => setTimeout(() => r(null), 50))
-          ]);
-
-          if (n) {
-            buffer += decoder.decode(chunk.subarray(0, n));
-          }
-
-          if (buffer.includes("\r\n") || buffer.includes("OK") || buffer.includes("BAD") || buffer.includes("NO")) {
-            const result = buffer;
-            buffer = "";
-            return result;
-          }
-        } catch (e) {
-          break;
+        if (n && n > 0) {
+          response += decoder.decode(chunk.subarray(0, n));
         }
+
+        if (response.includes("\r\n") &&
+            (response.match(/^[A-Z0-9]+ (OK|BAD|NO)/m) || response.match(/\* \d+ FETCH/))) {
+          return response;
+        }
+      } catch (_e) {
+        break;
       }
-
-      const result = buffer;
-      buffer = "";
-      return result;
     }
 
-    async function cmd(command: string): Promise<string> {
-      await conn.write(encoder.encode(command + "\r\n"));
-      return await readUntilComplete();
-    }
+    return response;
+  }
 
-    await readUntilComplete(1000);
+  async function sendCommand(command: string): Promise<string> {
+    await conn.write(encoder.encode(command + "\r\n"));
+    return await readResponse();
+  }
 
-    await cmd(`A1 LOGIN ${email} ${appPassword}`);
-    await cmd('A2 SELECT INBOX');
+  try {
+    await readResponse(1000);
 
-    const searchResult = await cmd('A3 UID SEARCH ALL');
-    const uidMatch = searchResult.match(/\* SEARCH (.+)/);
+    await sendCommand(`A001 LOGIN ${email} ${appPassword}`);
+    await sendCommand('A002 SELECT INBOX');
 
+    const searchResp = await sendCommand('A003 SEARCH ALL');
+
+    const uidMatch = searchResp.match(/\* SEARCH ([\d\s]+)/);
     if (!uidMatch) {
+      console.log("No messages found");
+      await sendCommand('A999 LOGOUT');
       conn.close();
       return [];
     }
 
-    const uids = uidMatch[1].trim().split(' ').filter(Boolean);
+    const messageIds = uidMatch[1].trim().split(/\s+/).filter(Boolean);
+    console.log(`Found ${messageIds.length} messages`);
+
     const messages = [];
+    const recentIds = messageIds.slice(-50).reverse();
 
-    const recentUids = uids.slice(-30).reverse().slice(0, 20);
+    for (const msgId of recentIds) {
+      const fetchResp = await sendCommand(`A${msgId} FETCH ${msgId} (BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)] BODY[TEXT])`);
 
-    for (const uid of recentUids) {
-      const headerCmd = `A${100 + parseInt(uid)} UID FETCH ${uid} BODY[HEADER]`;
-      const bodyCmd = `A${200 + parseInt(uid)} UID FETCH ${uid} BODY[TEXT]`;
+      const fromMatch = fetchResp.match(/From:\s*(.+?)[\r\n]/i);
+      const toMatch = fetchResp.match(/To:\s*(.+?)[\r\n]/i);
+      const subjectMatch = fetchResp.match(/Subject:\s*(.+?)[\r\n]/i);
+      const dateMatch = fetchResp.match(/Date:\s*(.+?)[\r\n]/i);
 
-      const headerResp = await cmd(headerCmd);
-      const bodyResp = await cmd(bodyCmd);
+      const bodyMatch = fetchResp.match(/BODY\[TEXT\]\s*\{(\d+)\}\s*\r?\n([\s\S]*?)(?:\r?\n\)|\r?\nA\d+)/);
 
-      const from = headerResp.match(/^From:\s*(.+)$/im)?.[1]?.trim() || '';
-      const to = headerResp.match(/^To:\s*(.+)$/im)?.[1]?.trim() || '';
-      const subject = headerResp.match(/^Subject:\s*(.+)$/im)?.[1]?.trim() || '';
-      const date = headerResp.match(/^Date:\s*(.+)$/im)?.[1]?.trim() || '';
+      if (fromMatch && toMatch) {
+        const from = fromMatch[1].trim();
+        const to = toMatch[1].trim();
+        const subject = subjectMatch?.[1]?.trim() || '(no subject)';
+        const date = dateMatch?.[1]?.trim() || new Date().toISOString();
+        const body = bodyMatch?.[2]?.trim().substring(0, 1000) || '';
 
-      const bodyMatch = bodyResp.match(/BODY\[TEXT\]\s*\{?\d*\}?\s*\r?\n([\s\S]+?)(?:\r?\n\)|$)/);
-      const body = bodyMatch ? bodyMatch[1].trim().substring(0, 500) : '';
-
-      if (from && to) {
-        messages.push({ id: uid, from, to, subject, date, body });
+        messages.push({ id: msgId, from, to, subject, date, body });
       }
     }
 
-    await cmd('A999 LOGOUT');
+    await sendCommand('A999 LOGOUT');
+    conn.close();
 
-    try {
-      conn.close();
-    } catch (e) {
-      // ignore
-    }
-
+    console.log(`Retrieved ${messages.length} messages`);
     return messages;
-  }
 
-  return [];
+  } catch (error) {
+    console.error("IMAP error:", error);
+    try { conn.close(); } catch (_e) {}
+    return [];
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -139,53 +132,66 @@ Deno.serve(async (req: Request) => {
       throw new Error("Gmail configuration not found");
     }
 
-    const messages = await fetchGmailViaAPI(
+    console.log(`Fetching emails for ${gmailConfig.gmail_user}`);
+
+    const messages = await fetchAllGmailMessages(
       gmailConfig.gmail_user,
       gmailConfig.gmail_app_password
     );
 
     let insertedCount = 0;
+    let updatedCount = 0;
 
     for (const msg of messages) {
-      const fromEmail = msg.from.match(/<([^>]+)>/)?.[1] || msg.from.trim();
-      const toEmail = msg.to.match(/<([^>]+)>/)?.[1] || msg.to.trim();
+      const fromEmail = msg.from.match(/<([^>]+)>/)?.[1]?.trim() || msg.from.trim();
+      const toEmail = msg.to.match(/<([^>]+)>/)?.[1]?.trim() || msg.to.trim();
 
       const userEmail = gmailConfig.gmail_user.toLowerCase();
       const isSent = fromEmail.toLowerCase().includes(userEmail);
 
       const otherEmail = isSent ? toEmail : fromEmail;
-
       const subjectClean = msg.subject.replace(/^(Re:|RE:|Fwd:|FW:)\s*/gi, '').trim();
+      const threadId = `${otherEmail.toLowerCase()}-${subjectClean.toLowerCase()}`;
 
-      const threadId = `${otherEmail}-${subjectClean}`.toLowerCase();
-
-      const { error: insertError } = await supabase
+      const { data: existing } = await supabase
         .from("messages")
-        .upsert({
-          user_id: user_id,
-          gmail_message_id: `imap-uid-${msg.id}`,
-          thread_id: threadId,
-          from_email: fromEmail,
-          to_email: toEmail,
-          subject: msg.subject,
-          body: msg.body,
-          is_sent: isSent,
-          received_at: new Date(msg.date || Date.now()),
-        }, {
-          onConflict: "gmail_message_id",
-          ignoreDuplicates: true,
-        });
+        .select("id")
+        .eq("gmail_message_id", `imap-${msg.id}`)
+        .maybeSingle();
 
-      if (!insertError) {
-        insertedCount++;
+      if (existing) {
+        updatedCount++;
+      } else {
+        const { error: insertError } = await supabase
+          .from("messages")
+          .insert({
+            user_id: user_id,
+            gmail_message_id: `imap-${msg.id}`,
+            thread_id: threadId,
+            from_email: fromEmail,
+            to_email: toEmail,
+            subject: msg.subject,
+            body: msg.body,
+            is_sent: isSent,
+            received_at: new Date(msg.date),
+          });
+
+        if (!insertError) {
+          insertedCount++;
+        } else {
+          console.error("Insert error:", insertError);
+        }
       }
     }
+
+    console.log(`Inserted: ${insertedCount}, Already exists: ${updatedCount}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         messageCount: insertedCount,
         totalFetched: messages.length,
+        details: `${insertedCount} nouveaux, ${updatedCount} existants`
       }),
       {
         headers: {
