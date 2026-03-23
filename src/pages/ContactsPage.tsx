@@ -146,20 +146,20 @@ export default function ContactsPage({ supabase }) {
       if (data) {
         const messagesByContact: Record<number, Array<{ text: string; date: Date; isSent: boolean; from: string; to: string }>> = {};
 
-        const targetEmail = 'sine.nomine.1011000@gmail.com';
-
         CONTACTS.forEach(contact => {
+          const contactEmail = contact.email.toLowerCase();
+
           const contactMessages = data.filter(msg => {
             const fromEmail = msg.from_email?.toLowerCase() || '';
             const toEmail = msg.to_email?.toLowerCase() || '';
 
-            const involvesTarget = fromEmail.includes(targetEmail.toLowerCase()) || toEmail.includes(targetEmail.toLowerCase());
+            const involvesContact = fromEmail.includes(contactEmail) || toEmail.includes(contactEmail);
 
-            return involvesTarget;
+            return involvesContact;
           }).map(msg => ({
             text: msg.body || '',
             date: new Date(msg.received_at),
-            isSent: msg.is_sent,
+            isSent: msg.is_sent || false,
             from: msg.from_email,
             to: msg.to_email,
             subject: msg.subject
