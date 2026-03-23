@@ -83,6 +83,7 @@ export default function ContactsPage({ supabase }) {
   const [fetchingEmails, setFetchingEmails] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userGmailEmail, setUserGmailEmail] = useState<string | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
   const categories = [
     { key: 'all', label: t.contacts.all },
@@ -144,6 +145,45 @@ export default function ContactsPage({ supabase }) {
       loadMessages(userId, userGmailEmail);
     }
   }, [selectedContact, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const pollImapMessages = async () => {
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/imap-polling`;
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) return;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success && result.saved > 0) {
+          console.log(`${result.saved} nouveaux messages reçus`);
+          await loadMessages(userId, userGmailEmail);
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    };
+
+    pollImapMessages();
+
+    const interval = setInterval(pollImapMessages, 30000);
+    setPollingInterval(interval as any);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [userId, userGmailEmail]);
 
   const loadMessages = async (uid: string, gmailEmail: string | null) => {
     try {
