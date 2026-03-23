@@ -7,17 +7,90 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-interface GmailMessage {
-  id: string;
-  threadId: string;
-  labelIds: string[];
-  snippet: string;
-  payload: {
-    headers: Array<{ name: string; value: string }>;
-    parts?: Array<{ mimeType: string; body: { data?: string } }>;
-    body?: { data?: string };
-  };
-  internalDate: string;
+async function connectToIMAP(email: string, password: string) {
+  const imapHost = "imap.gmail.com";
+  const imapPort = 993;
+
+  try {
+    const conn = await Deno.connectTls({
+      hostname: imapHost,
+      port: imapPort,
+    });
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    async function sendCommand(command: string): Promise<string> {
+      await conn.write(encoder.encode(command + "\r\n"));
+      const buffer = new Uint8Array(65536);
+      let response = "";
+      let bytesRead = 0;
+
+      do {
+        bytesRead = await conn.read(buffer) || 0;
+        if (bytesRead > 0) {
+          response += decoder.decode(buffer.subarray(0, bytesRead));
+        }
+      } while (bytesRead > 0 && !response.includes("\r\n"));
+
+      return response;
+    }
+
+    await sendCommand(`A001 LOGIN "${email}" "${password}"`);
+    await sendCommand('A002 SELECT INBOX');
+
+    const searchResponse = await sendCommand('A003 SEARCH ALL');
+    const messageIds = searchResponse.match(/\* SEARCH (.+)\r\n/)?.[1]?.split(' ').filter(Boolean) || [];
+
+    const messages = [];
+    const recentIds = messageIds.slice(-50).reverse();
+
+    for (const msgId of recentIds.slice(0, 20)) {
+      const headerResponse = await sendCommand(`A${100 + parseInt(msgId)} FETCH ${msgId} (BODY[HEADER])`);
+      const bodyResponse = await sendCommand(`A${200 + parseInt(msgId)} FETCH ${msgId} (BODY[TEXT])`);
+
+      const headers = parseHeaders(headerResponse);
+      const body = parseBody(bodyResponse);
+
+      if (headers.from || headers.to) {
+        messages.push({
+          id: msgId,
+          from: headers.from || '',
+          to: headers.to || '',
+          subject: headers.subject || '',
+          date: headers.date || '',
+          body: body,
+        });
+      }
+    }
+
+    await sendCommand('A999 LOGOUT');
+    conn.close();
+
+    return messages;
+  } catch (error) {
+    console.error('IMAP error:', error);
+    throw new Error(`IMAP connection failed: ${error.message}`);
+  }
+}
+
+function parseHeaders(response: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const lines = response.split('\r\n');
+
+  for (const line of lines) {
+    if (line.startsWith('From:')) headers.from = line.substring(5).trim();
+    if (line.startsWith('To:')) headers.to = line.substring(3).trim();
+    if (line.startsWith('Subject:')) headers.subject = line.substring(8).trim();
+    if (line.startsWith('Date:')) headers.date = line.substring(5).trim();
+  }
+
+  return headers;
+}
+
+function parseBody(response: string): string {
+  const bodyMatch = response.match(/BODY\[TEXT\] \{(\d+)\}\r\n([\s\S]+?)\r\n\)/);
+  return bodyMatch ? bodyMatch[2].substring(0, 500) : '';
 }
 
 Deno.serve(async (req: Request) => {
@@ -46,91 +119,44 @@ Deno.serve(async (req: Request) => {
       throw new Error("Gmail configuration not found");
     }
 
-    const auth = btoa(`${gmailConfig.gmail_user}:${gmailConfig.gmail_app_password}`);
-    const gmailApiUrl = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
-
-    const listResponse = await fetch(`${gmailApiUrl}?maxResults=100&q=in:anywhere`, {
-      headers: {
-        Authorization: `Basic ${auth}`,
-      },
-    });
-
-    if (!listResponse.ok) {
-      const errorText = await listResponse.text();
-      console.error("Gmail API error:", errorText);
-      throw new Error(`Gmail API error: ${listResponse.status}`);
-    }
-
-    const listData = await listResponse.json();
-    const messages = listData.messages || [];
-
+    const messages = await connectToIMAP(gmailConfig.gmail_user, gmailConfig.gmail_app_password);
     const detailedMessages = [];
 
-    for (const message of messages.slice(0, 20)) {
-      const detailResponse = await fetch(
-        `${gmailApiUrl}/${message.id}?format=full`,
-        {
-          headers: {
-            Authorization: `Basic ${auth}`,
-          },
-        }
-      );
+    for (const msg of messages) {
+      const isSentByUser = msg.from.includes(gmailConfig.gmail_user);
+      const isReceivedByUser = msg.to.includes(gmailConfig.gmail_user);
 
-      if (detailResponse.ok) {
-        const detail: GmailMessage = await detailResponse.json();
+      if (!isSentByUser && !isReceivedByUser) {
+        continue;
+      }
 
-        const headers = detail.payload.headers;
-        const from = headers.find(h => h.name.toLowerCase() === "from")?.value || "";
-        const to = headers.find(h => h.name.toLowerCase() === "to")?.value || "";
-        const subject = headers.find(h => h.name.toLowerCase() === "subject")?.value || "";
-        const date = headers.find(h => h.name.toLowerCase() === "date")?.value || "";
+      const gmailMessageId = `imap-${msg.id}-${Date.now()}`;
 
-        const isSentByUser = from.includes(gmailConfig.gmail_user);
-        const isReceivedByUser = to.includes(gmailConfig.gmail_user);
+      const { error: insertError } = await supabase
+        .from("messages")
+        .upsert({
+          user_id: user_id,
+          gmail_message_id: gmailMessageId,
+          thread_id: msg.subject,
+          from_email: msg.from,
+          to_email: msg.to,
+          subject: msg.subject,
+          body: msg.body,
+          is_sent: isSentByUser,
+          received_at: new Date(msg.date || Date.now()),
+        }, {
+          onConflict: "gmail_message_id",
+          ignoreDuplicates: true,
+        });
 
-        let body = "";
-        if (detail.payload.parts) {
-          const textPart = detail.payload.parts.find(
-            p => p.mimeType === "text/plain" || p.mimeType === "text/html"
-          );
-          if (textPart?.body?.data) {
-            body = atob(textPart.body.data.replace(/-/g, "+").replace(/_/g, "/"));
-          }
-        } else if (detail.payload.body?.data) {
-          body = atob(detail.payload.body.data.replace(/-/g, "+").replace(/_/g, "/"));
-        }
-
-        if (!isSentByUser && !isReceivedByUser) {
-          continue;
-        }
-
-        const { error: insertError } = await supabase
-          .from("messages")
-          .upsert({
-            user_id: user_id,
-            gmail_message_id: detail.id,
-            thread_id: detail.threadId,
-            from_email: from,
-            to_email: to,
-            subject: subject,
-            body: body,
-            is_sent: isSentByUser,
-            received_at: new Date(parseInt(detail.internalDate)),
-          }, {
-            onConflict: "gmail_message_id",
-            ignoreDuplicates: true,
-          });
-
-        if (!insertError) {
-          detailedMessages.push({
-            id: detail.id,
-            from,
-            to,
-            subject,
-            body: body.substring(0, 200),
-            date,
-          });
-        }
+      if (!insertError) {
+        detailedMessages.push({
+          from: msg.from,
+          to: msg.to,
+          subject: msg.subject,
+          body: msg.body.substring(0, 200),
+          date: msg.date,
+        });
       }
     }
 
