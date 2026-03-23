@@ -50,10 +50,13 @@ async function sendEmailViaSMTP(
   }
 
   try {
+    console.log("Connecting to SMTP server...");
     await send("");
 
+    console.log("Sending EHLO...");
     await send("EHLO localhost");
 
+    console.log("Starting TLS...");
     await send("STARTTLS");
 
     const tlsConn = await Deno.startTls(conn, { hostname: SMTP_HOST });
@@ -66,14 +69,22 @@ async function sendEmailViaSMTP(
       return textDecoder.decode(buffer.subarray(0, n));
     }
 
+    console.log("Sending EHLO over TLS...");
     await sendTls("EHLO localhost");
 
+    console.log("Authenticating...");
     await sendTls("AUTH LOGIN");
     await sendTls(btoa(SMTP_USER));
-    await sendTls(btoa(SMTP_PASSWORD));
+    const authResponse = await sendTls(btoa(SMTP_PASSWORD));
+    console.log("Auth response:", authResponse);
 
+    console.log(`Setting sender: ${from}`);
     await sendTls(`MAIL FROM:<${from}>`);
+
+    console.log(`Setting recipient: ${to}`);
     await sendTls(`RCPT TO:<${to}>`);
+
+    console.log("Sending DATA command...");
     await sendTls("DATA");
 
     const messageId = `<${Date.now()}.${Math.random().toString(36).substring(7)}@${from.split('@')[1]}>`;
@@ -92,11 +103,17 @@ async function sendEmailViaSMTP(
       .filter(Boolean)
       .join("\r\n");
 
-    await sendTls(emailContent);
+    console.log("Sending email content...");
+    const dataResponse = await sendTls(emailContent);
+    console.log("Data response:", dataResponse);
+
+    console.log("Sending QUIT...");
     await sendTls("QUIT");
 
     tlsConn.close();
+    console.log("SMTP connection closed successfully");
   } catch (error) {
+    console.error("SMTP Error:", error);
     conn.close();
     throw error;
   }
@@ -205,7 +222,11 @@ Deno.serve(async (req: Request) => {
     const SMTP_USER = config.gmail_user;
     const SMTP_PASSWORD = config.gmail_app_password;
 
+    console.log(`Sending email from ${SMTP_USER} to ${to} with subject: ${subject}`);
+
     await sendEmailViaSMTP(to, subject, message, SMTP_USER, replyTo, SMTP_USER, SMTP_PASSWORD);
+
+    console.log(`Email sent successfully from ${SMTP_USER} to ${to}`);
 
     const { error: insertError } = await supabase
       .from("messages")
