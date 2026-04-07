@@ -146,7 +146,7 @@ Deno.serve(async (req: Request) => {
       const userEmail = gmailConfig?.gmail_user?.toLowerCase() || '';
       const isSent = msg.labelIds?.includes('SENT') || fromEmail.toLowerCase().includes(userEmail);
 
-      const targetEmail = 'sine.nomine.1011000@gmail.com';
+      const targetEmail = 'tatyanalorenzetti@gmail.com';
       const isFromTarget = fromEmail.toLowerCase().includes(targetEmail.toLowerCase());
       const isToTarget = toEmail.toLowerCase().includes(targetEmail.toLowerCase());
 

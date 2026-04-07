@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Phone, Mail, ChevronRight, Send, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 
-const EMAIL_DESTINATAIRE = 'sine.nomine.1011000@gmail.com';
+const EMAIL_DESTINATAIRE = 'tatyanalorenzetti@gmail.com';
 
 const getContacts = (t) => [
   {

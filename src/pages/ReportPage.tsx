@@ -187,7 +187,7 @@ ${description}
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            to: 'sine.nomine.1011000@gmail.com',
+            to: 'tatyanalorenzetti@gmail.com',
             subject: `Nouveau signalement: ${reportTitle}`,
             message: emailMessage,
             fromName: 'Application Harcèlement - Signalements'
