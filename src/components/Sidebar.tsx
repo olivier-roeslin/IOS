@@ -34,7 +34,14 @@ export default function Sidebar({ currentPage, onPageChange }) {
 
   return (
     <aside className="w-64 bg-gradient-to-b from-blue-600 to-teal-500 dark:from-gray-800 dark:to-gray-900 text-white flex flex-col p-6">
-      <h1 className="text-3xl font-bold mb-8">AbusePas</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <img
+          src="/logo_chat_2.png"
+          alt="AbusePas Logo"
+          className="w-12 h-12 object-contain"
+        />
+        <h1 className="text-3xl font-bold">AbusePas</h1>
+      </div>
 
       <nav className="space-y-3 flex-1">
         {menuItems.map((item) => {

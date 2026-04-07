@@ -85,6 +85,13 @@ export default function Login({ supabase }) {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 flex">
       <div className="w-1/3 bg-gradient-to-br from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 text-white p-16 flex flex-col justify-center">
+        <div className="flex justify-center mb-6">
+          <img
+            src="/logo_chat_2.png"
+            alt="AbusePas Logo"
+            className="w-32 h-32 object-contain"
+          />
+        </div>
         <h1 className="text-4xl font-bold mb-2">{t.login.appTitle}</h1>
         <p className="text-lg text-blue-100 dark:text-gray-300 mb-8">{t.login.appSubtitle}</p>
         <p className="text-sm text-blue-100 dark:text-gray-400 leading-relaxed">
