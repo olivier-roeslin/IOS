@@ -95,7 +95,6 @@ export default function Login({ supabase }) {
         </div>
         <h1 className="text-5xl font-bold mb-3 tracking-tight">{t.login.appTitle}</h1>
         <p className="text-xl text-blue-50 dark:text-gray-200 mb-8 font-light">{t.login.appSubtitle}</p>
-        <div className="w-16 h-1 bg-white/30 rounded-full mb-8"></div>
         <p className="text-sm text-blue-50 dark:text-gray-300 leading-relaxed max-w-sm">
           {t.login.appDescription}
         </p>
