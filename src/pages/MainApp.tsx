@@ -37,6 +37,10 @@ export default function MainApp({ session, supabase }) {
     }
   };
 
+  const handleProfileUpdate = (updatedProfile: { display_name: string; profile_photo_url: string }) => {
+    setUserProfile(updatedProfile);
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -60,14 +64,14 @@ export default function MainApp({ session, supabase }) {
               )}
             </div>
             <div>
+              <div className="font-semibold text-gray-900 dark:text-white">
+                {userProfile.display_name || session.user.email}
+              </div>
               {userProfile.display_name && (
-                <div className="font-semibold text-gray-900 dark:text-white">
-                  {userProfile.display_name}
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {session.user.email}
                 </div>
               )}
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {session.user.email}
-              </div>
             </div>
           </div>
           <button
@@ -85,7 +89,7 @@ export default function MainApp({ session, supabase }) {
           {currentPage === 'documents' && <DocumentsPage />}
           {currentPage === 'contacts' && <ContactsPage supabase={supabase} />}
           {currentPage === 'profile' && <ProfilePage supabase={supabase} />}
-          {currentPage === 'settings' && <SettingsPage supabase={supabase} />}
+          {currentPage === 'settings' && <SettingsPage supabase={supabase} onProfileUpdate={handleProfileUpdate} />}
         </main>
       </div>
     </div>

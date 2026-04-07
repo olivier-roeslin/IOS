@@ -1,4 +1,4 @@
-import { AlertCircle, MessageCircle, FileText, Users, CircleUser as UserCircle, Settings } from 'lucide-react';
+import { AlertCircle, MessageCircle, FileText, Users, Settings } from 'lucide-react';
 import { useLanguage } from '../lib/LanguageContext';
 
 export default function Sidebar({ currentPage, onPageChange }) {
@@ -24,11 +24,6 @@ export default function Sidebar({ currentPage, onPageChange }) {
       id: 'contacts',
       label: t.sidebar.contacts,
       icon: Users,
-    },
-    {
-      id: 'profile',
-      label: t.sidebar.profile,
-      icon: UserCircle,
     },
     {
       id: 'settings',
