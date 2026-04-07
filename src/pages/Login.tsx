@@ -84,17 +84,19 @@ export default function Login({ supabase }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 flex">
-      <div className="w-1/3 bg-gradient-to-br from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 text-white p-16 flex flex-col justify-center">
-        <div className="flex justify-center mb-6">
+      <div className="w-1/3 bg-gradient-to-br from-blue-600 to-teal-500 dark:from-gray-900 dark:to-gray-800 text-white p-16 flex flex-col justify-center items-center text-center">
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-white/10 rounded-full blur-2xl"></div>
           <img
             src="/logo_chat_2.png"
             alt="AbusePas Logo"
-            className="w-32 h-32 object-contain"
+            className="relative w-40 h-40 object-contain drop-shadow-2xl"
           />
         </div>
-        <h1 className="text-4xl font-bold mb-2">{t.login.appTitle}</h1>
-        <p className="text-lg text-blue-100 dark:text-gray-300 mb-8">{t.login.appSubtitle}</p>
-        <p className="text-sm text-blue-100 dark:text-gray-400 leading-relaxed">
+        <h1 className="text-5xl font-bold mb-3 tracking-tight">{t.login.appTitle}</h1>
+        <p className="text-xl text-blue-50 dark:text-gray-200 mb-8 font-light">{t.login.appSubtitle}</p>
+        <div className="w-16 h-1 bg-white/30 rounded-full mb-8"></div>
+        <p className="text-sm text-blue-50 dark:text-gray-300 leading-relaxed max-w-sm">
           {t.login.appDescription}
         </p>
       </div>
